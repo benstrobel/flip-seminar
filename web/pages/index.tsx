@@ -125,7 +125,9 @@ export default function Home() {
                 name="Local Prediction"
               />
               <Swiper
-                imageUrl={images[appState.currentIndex].link}
+                imageUrl={
+                  "/images/" + images[appState.currentIndex].id + ".jpg"
+                }
                 style={styles[appState.currentIndex]}
                 sampleCallback={sampleCallback}
                 loading={appState.nextImageLoading}
