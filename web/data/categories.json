@@ -1,0 +1,21 @@
+{
+  "gender": ["Men", "Women", "Unisex", "Boys", "Girls"],
+  "masterCategory": [
+    "Apparel",
+    "Accessories",
+    "Footwear",
+    "Personal Care",
+    "Free Items"
+  ],
+  "subCategory": ["Topwear", "Shoes", "Bags", "Bottomwear", "Watches"],
+  "articleType": [
+    "Tshirts",
+    "Shirts",
+    "Casual Shoes",
+    "Watches",
+    "Sports Shoes"
+  ],
+  "baseColour": ["Black", "White", "Blue", "Brown", "Grey"],
+  "season": ["Summer", "Fall", "Winter", "Spring"],
+  "usage": ["Casual", "Sports", "Ethnic", "Formal", "NA"]
+}
