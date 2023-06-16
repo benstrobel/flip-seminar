@@ -9,13 +9,13 @@ import {
   Text,
 } from "@mantine/core";
 import Head from "next/head";
-import { test } from "@/lib/learning";
-import Pong, { GameState, initial_ball_speed } from "@/components/Pong";
-import { useState } from "react";
+import { getModel, test, trainModel } from "@/lib/learning";
+import Pong, { GameState, Sample, initial_ball_speed } from "@/components/Pong";
+import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
-function getInitState(): GameState {
+function getInitState(withModel: boolean = false): GameState {
   return {
     stop: false,
     timeAtLastMeasurement: 0,
@@ -29,6 +29,7 @@ function getInitState(): GameState {
     },
     wall: { x: 450, y: 0, w: 25, h: 500 },
     input: 0,
+    model: withModel ? getModel() : undefined,
   };
 }
 
@@ -38,10 +39,22 @@ export default function Home() {
     getInitState()
   );
   const [localPredictionState, setLocalPredictionState] = useState<GameState>(
-    getInitState()
+    getInitState(true)
   );
   const [federatedPredictionState, setFederatedPredictionState] =
     useState<GameState>(getInitState());
+
+  const [sampleList, setSampleList] = useState<Sample[]>([]);
+
+  useEffect(() => {
+    if (sampleList.length >= 30 && localPredictionState.model) {
+      console.log("Training");
+      const model = localPredictionState.model;
+      trainModel(model, sampleList);
+      setSampleList([]);
+      setLocalPredictionState((state) => ({ ...state, model: model }));
+    }
+  }, [sampleList, localPredictionState.model]);
 
   return (
     <div>
@@ -70,7 +83,8 @@ export default function Home() {
                     setState={setGroundTruthState}
                     sampleRate={10}
                     sampleProviderCallback={(sample) => {
-                      console.log(JSON.stringify(sample));
+                      setSampleList((state) => [...state, sample]);
+                      // console.log(JSON.stringify(sample));
                     }}
                   />
                 </Stack>

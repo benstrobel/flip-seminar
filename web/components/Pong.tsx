@@ -1,3 +1,4 @@
+import { getModel, modelPredict, trainModel } from "@/lib/learning";
 import {
   Dispatch,
   SetStateAction,
@@ -6,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import * as tf from "@tensorflow/tfjs";
 
 interface PongProps {
   id: string;
@@ -40,11 +42,13 @@ interface Ball {
   speedY: number;
 }
 
-interface Sample {
-  gameState: {
-    playerBallVec: { x: number; y: number };
-    playerBallDistance: number;
-  };
+export interface SampleGameState {
+  playerBallVec: { x: number; y: number };
+  playerBallDistance: number;
+}
+
+export interface Sample {
+  gameState: SampleGameState;
   resultInput: number;
 }
 
@@ -57,6 +61,7 @@ export interface GameState {
   wall: Wall;
   ctx?: CanvasRenderingContext2D;
   input: number;
+  model?: tf.Sequential;
 }
 
 const ticks_per_second = 60;
@@ -78,6 +83,27 @@ function normalizeVector(vec: { x: number; y: number }): {
   };
 }
 
+function stateToSampleGameState(
+  state: GameState,
+  maxDistance: number
+): SampleGameState {
+  const vec = {
+    x: state.ball.x - state.p0.x,
+    y: state.ball.y - state.p0.y,
+  };
+  const normalizedVec = normalizeVector(vec);
+  const distance =
+    Math.sqrt(
+      Math.pow(state.ball.x - state.p0.x, 2) +
+        Math.pow(state.ball.y - state.p0.y, 2)
+    ) / maxDistance;
+
+  return {
+    playerBallDistance: distance,
+    playerBallVec: normalizedVec,
+  };
+}
+
 export default function Pong({
   id,
   width,
@@ -90,6 +116,33 @@ export default function Pong({
   sampleRate,
   sampleProviderCallback,
 }: PongProps) {
+  /* useEffect(() => {
+    const randomSamples: Sample[] = [];
+    for (let i = 0; i < 50; i++) {
+      randomSamples.push({
+        resultInput: 0,
+        gameState: {
+          playerBallDistance: Math.random(),
+          playerBallVec: {
+            x: Math.random(),
+            y: Math.random(),
+          },
+        },
+      });
+    }
+
+    const f = async () => {
+      let model = getModel();
+      model = await trainModel(model, randomSamples);
+      const prediction = await modelPredict(model, {
+        playerBallDistance: 0,
+        playerBallVec: { x: 0, y: 0 },
+      });
+      console.log(prediction);
+    };
+    f();
+  }, []); */
+
   useEffect(() => {
     if (inputEnabled) {
       window.addEventListener("keydown", inputPressed);
@@ -107,13 +160,21 @@ export default function Pong({
   }, [height, width]);
 
   const logicTick = useCallback(
-    (state: GameState) => {
-      // Handling player input
-      if (state.input > 0) {
+    async (state: GameState) => {
+      // Handling player/model input
+      let modelInput = 0;
+      if (state.model) {
+        modelInput = await modelPredict(
+          state.model,
+          stateToSampleGameState(state, maxDistance)
+        );
+      }
+
+      if (state.model ? modelInput > 0 : state.input > 0) {
         if (state.p0.y + player_y_size / 2 + player_speed <= height) {
           state.p0.y += player_speed;
         }
-      } else if (state.input < 0) {
+      } else if (state.model ? modelInput < 0 : state.input < 0) {
         if (state.p0.y - player_y_size / 2 - player_speed >= 0) {
           state.p0.y -= player_speed;
         }
@@ -225,7 +286,7 @@ export default function Pong({
   const tick = useCallback(
     async (state: GameState) => {
       const start = performance.now();
-      logicTick(state);
+      await logicTick(state);
       const elapsed = performance.now() - start;
       if (ms_per_tick - elapsed < 0) {
         console.log("Cant keep up: " + (ms_per_tick - elapsed));
