@@ -8,7 +8,7 @@ export function getModel() {
   model.add(tf.layers.dense({ units: 2, inputShape: [10] }));
   model.compile({
     loss: tf.losses.sigmoidCrossEntropy,
-    optimizer: new tf.SGDOptimizer(0.1),
+    optimizer: new tf.SGDOptimizer(0.4),
   });
   return model;
 }

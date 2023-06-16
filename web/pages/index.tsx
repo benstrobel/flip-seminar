@@ -63,7 +63,7 @@ export default function Home() {
   const [appState, setAppState] = useState<ApplicationState>({
     currentIndex: Math.round(Math.random() * maxItemIndex),
     samples: [],
-    nextImageLoading: false, // nextImageLoading: true,
+    nextImageLoading: false,
     localStatsData: {
       colorStatData: [0, 0, 0, 0, 0],
       seasonStatData: [0, 0, 0, 0],
@@ -83,7 +83,7 @@ export default function Home() {
         setAppState((state) => ({
           ...state,
           currentIndex: Math.round(Math.random() * maxItemIndex),
-          nextImageLoading: false, // nextImageLoading: true,
+          nextImageLoading: true,
           samples: [{ style: style, pos: pos }],
         }));
         console.log("training");
@@ -97,7 +97,7 @@ export default function Home() {
         setAppState((state) => ({
           ...state,
           currentIndex: Math.round(Math.random() * maxItemIndex),
-          nextImageLoading: false, //nextImageLoading: true,
+          nextImageLoading: true,
           samples: [...state.samples, { style: style, pos: pos }],
         }));
       }
