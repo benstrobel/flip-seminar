@@ -1,5 +1,6 @@
 import csv
 import random
+import urllib.request
 
 total = 44448
 
@@ -44,5 +45,20 @@ def main():
     newstylesfile.close()
 
 
+def download_images():
+    imagesfile = open("images_out.csv")
+    imagereader = csv.reader(imagesfile, delimiter=",")
+
+    first = True
+    for imagerow in imagereader:
+        if first:
+            first = False
+            continue
+        urllib.request.urlretrieve(imagerow[1], "./out/"+imagerow[0])
+
+    imagesfile.close()
+
+
 if __name__ == '__main__':
     main()
+    download_images()
