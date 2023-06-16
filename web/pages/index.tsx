@@ -6,6 +6,8 @@ import importedStyles from "@/data/styles.json";
 import categories from "@/data/categories.json";
 import Swiper from "@/components/Swiper";
 import Stats from "@/components/Stats";
+import * as tf from "@tensorflow/tfjs";
+import { getModel, modelBulkPredict, trainModel } from "@/lib/learning";
 
 export interface Categories {
   gender: "Men" | "Women" | "Unisex" | "Boys" | "Girls";
@@ -41,7 +43,7 @@ export interface Sample {
 export interface StatsData {
   colorStatData: number[];
   seasonStatData: number[];
-  usageStatDat: number[];
+  usageStatData: number[];
 }
 
 export interface ApplicationState {
@@ -50,34 +52,58 @@ export interface ApplicationState {
   nextImageLoading: boolean;
   localStatsData: StatsData;
   remoteStatsData: StatsData;
+  model: tf.Sequential;
 }
 
 const maxItemIndex = images.length;
+const sampleThreshold = 5;
 
 export default function Home() {
   const styles = importedStyles as Style[];
   const [appState, setAppState] = useState<ApplicationState>({
     currentIndex: Math.round(Math.random() * maxItemIndex),
     samples: [],
-    nextImageLoading: true,
+    nextImageLoading: false, // nextImageLoading: true,
     localStatsData: {
       colorStatData: [0, 0, 0, 0, 0],
       seasonStatData: [0, 0, 0, 0],
-      usageStatDat: [0, 0, 0, 0, 0],
+      usageStatData: [0, 0, 0, 0, 0],
     },
     remoteStatsData: {
       colorStatData: [0, 0, 0, 0, 0],
       seasonStatData: [0, 0, 0, 0],
-      usageStatDat: [0, 0, 0, 0, 0],
+      usageStatData: [0, 0, 0, 0, 0],
     },
+    model: getModel(),
   });
-  const sampleCallback = useCallback(() => {
-    setAppState((state) => ({
-      ...state,
-      currentIndex: Math.round(Math.random() * maxItemIndex),
-      nextImageLoading: true,
-    }));
-  }, []);
+  const sampleCallback = useCallback(
+    async (style: Style, pos: boolean) => {
+      if (appState.samples.length >= sampleThreshold) {
+        const samples = appState.samples;
+        setAppState((state) => ({
+          ...state,
+          currentIndex: Math.round(Math.random() * maxItemIndex),
+          nextImageLoading: false, // nextImageLoading: true,
+          samples: [{ style: style, pos: pos }],
+        }));
+        console.log("training");
+        const newModel = await trainModel(appState.model, samples);
+        setAppState((state) => ({ ...state, model: newModel }));
+        console.log("predicting");
+        const newLocalStats = await modelBulkPredict(newModel, styles);
+        setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
+        console.log("done");
+      } else {
+        setAppState((state) => ({
+          ...state,
+          currentIndex: Math.round(Math.random() * maxItemIndex),
+          nextImageLoading: false, //nextImageLoading: true,
+          samples: [...state.samples, { style: style, pos: pos }],
+        }));
+      }
+    },
+    [appState.model, appState.samples, styles]
+  );
 
   return (
     <div>
@@ -104,6 +130,7 @@ export default function Home() {
                 sampleCallback={sampleCallback}
                 loading={appState.nextImageLoading}
                 onLoad={() => {
+                  console.log("loaded");
                   setAppState((state) => ({
                     ...state,
                     nextImageLoading: false,

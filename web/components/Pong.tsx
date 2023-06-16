@@ -1,4 +1,4 @@
-import { getModel, modelPredict, trainModel } from "@/lib/learning";
+import { getModel, modelPredict, trainModel } from "@/lib/oldlearning";
 import {
   Dispatch,
   SetStateAction,

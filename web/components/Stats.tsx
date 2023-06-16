@@ -73,23 +73,23 @@ export default function Stats({
   const usageData = [
     {
       label: "Casual",
-      value: statsData.usageStatDat[0],
+      value: statsData.usageStatData[0],
     },
     {
       label: "Sports",
-      value: statsData.usageStatDat[1],
+      value: statsData.usageStatData[1],
     },
     {
       label: "Ethnic",
-      value: statsData.usageStatDat[2],
+      value: statsData.usageStatData[2],
     },
     {
       label: "Formal",
-      value: statsData.usageStatDat[3],
+      value: statsData.usageStatData[3],
     },
     {
       label: "NA",
-      value: statsData.usageStatDat[4],
+      value: statsData.usageStatData[4],
     },
   ];
 
