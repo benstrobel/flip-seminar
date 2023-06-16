@@ -35,7 +35,7 @@ export default function Home() {
             <Group position="apart">
               <Center>
                 <Stack align="center">
-                  <Title order={2}>Live</Title>
+                  <Title order={2}>Ground Truth</Title>
                   <Pong
                     id="canvas-live"
                     width={500}
@@ -46,13 +46,13 @@ export default function Home() {
               </Center>
               {/* <Center>
                 <Stack align="center">
-                  <Title order={2}>Local Learned</Title>
+                  <Title order={2}>Local Prediction</Title>
                   <Pong id="canvas-locallearned" width={500} height={500} />
                 </Stack>
               </Center> */}
               {/* <Center>
                 <Stack align="center">
-                  <Title order={2}>Federated Learned</Title>
+                  <Title order={2}>Federated Prediction</Title>
                   <div style={{ position: "relative" }}>
                     <Pong id="canvas-fedlearned" width={500} height={500} />
                     {!remoteConnected && (

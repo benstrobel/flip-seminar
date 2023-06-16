@@ -42,8 +42,11 @@ const ms_per_tick = 1000 / ticks_per_second;
 const player_x_size = 15;
 const player_y_size = 50;
 const ball_size = 10;
-const player_speed = 4;
-const initial_ball_speed = 5;
+const player_speed = 6;
+const initial_ball_speed = 8;
+
+let tickcounter = 0;
+let wasSetup = false;
 
 export default function Pong({
   id,
@@ -55,14 +58,18 @@ export default function Pong({
     stop: false,
     tick: 0,
     p0: { score: 0, x: 25, y: 250 },
-    ball: { speedX: 0, speedY: 3, x: 250, y: 250 },
+    ball: {
+      speedX: initial_ball_speed / 2,
+      speedY: Math.random() * initial_ball_speed + 2,
+      x: 250,
+      y: 250,
+    },
     wall: { x: 450, y: 0, w: 25, h: 500 },
     input: 0,
   });
 
   useEffect(() => {
     const canvas = document.getElementById(id)! as HTMLCanvasElement;
-    const boundingRect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext("2d")!;
     setState((state) => ({ ...state, ctx: ctx }));
     if (inputEnabled) {
@@ -75,6 +82,16 @@ export default function Pong({
       window.removeEventListener("keyup", inputReleased);
     };
   }, [id]);
+
+  useEffect(() => {
+    if (wasSetup) return;
+    wasSetup = true;
+    console.log("setup");
+    setInterval(() => {
+      console.log("tps: " + tickcounter);
+      tickcounter = 0;
+    }, 1000);
+  }, []);
 
   const logicTick = useCallback(() => {
     // Handling player input
@@ -103,8 +120,8 @@ export default function Pong({
     if (newBallX <= 0) {
       newBallX = 250;
       newBallY = 250;
-      newBallSpeedX = initial_ball_speed;
-      newBallSpeedY = 0;
+      newBallSpeedX = initial_ball_speed / 2;
+      newBallSpeedY = Math.random() * initial_ball_speed;
     }
     // Hit wall
     if (
@@ -114,9 +131,20 @@ export default function Pong({
       newBallY < state.wall.y + state.wall.h
     ) {
       newBallSpeedX = -newBallSpeedX;
+      newBallSpeedY = (Math.random() * 0.5 + 0.75) * newBallSpeedY;
     }
     // Hit player
-    // TODO
+    if (
+      state.p0.x - player_x_size / 2 < newBallX &&
+      newBallX < state.p0.x - player_x_size / 2 + player_x_size &&
+      state.p0.y - player_y_size / 2 < newBallY &&
+      newBallY < state.p0.y - player_y_size / 2 + player_y_size
+    ) {
+      newBallSpeedX = -newBallSpeedX;
+      newBallSpeedY = (Math.random() * 0.5 + 0.75) * newBallSpeedY;
+    }
+
+    // Update state
     setState((state) => ({
       ...state,
       ball: {
@@ -184,17 +212,21 @@ export default function Pong({
   }, [state.ctx, state.p0, state.ball]);
 
   const tick = useCallback(async () => {
+    tickcounter += 1;
     const start = performance.now();
     logicTick();
     renderCanvas();
     const elapsed = performance.now() - start;
-    await new Promise((r) => {
-      if (ms_per_tick - elapsed < 0) {
-        console.log("Cant keep up: " + (ms_per_tick - elapsed));
-      }
-      setTimeout(r, Math.max(ms_per_tick - elapsed, 0));
-    });
-    setState((state) => ({ ...state, tick: state.tick + 1 }));
+    if (ms_per_tick - elapsed < 0) {
+      console.log("Cant keep up: " + (ms_per_tick - elapsed));
+    }
+    if (ms_per_tick - elapsed < 0) {
+      console.log("Cant keep up: " + (ms_per_tick - elapsed));
+    }
+    const timeout = setTimeout(() => {
+      setState((state) => ({ ...state, tick: state.tick + 1 }));
+      clearTimeout(timeout);
+    }, Math.max(ms_per_tick - elapsed, 0));
   }, [logicTick, renderCanvas]);
 
   useEffect(() => {
