@@ -44,25 +44,39 @@ export default function Home() {
                   />
                 </Stack>
               </Center>
-              {/* <Center>
-                <Stack align="center">
-                  <Title order={2}>Local Prediction</Title>
-                  <Pong id="canvas-locallearned" width={500} height={500} />
-                </Stack>
-              </Center> */}
-              {/* <Center>
-                <Stack align="center">
-                  <Title order={2}>Federated Prediction</Title>
-                  <div style={{ position: "relative" }}>
-                    <Pong id="canvas-fedlearned" width={500} height={500} />
-                    {!remoteConnected && (
-                      <Overlay blur={10} center>
-                        <Text size={"lg"}>Not connected</Text>
-                      </Overlay>
-                    )}
-                  </div>
-                </Stack>
-              </Center> */}
+              {
+                <Center>
+                  <Stack align="center">
+                    <Title order={2}>Local Prediction</Title>
+                    <Pong
+                      id="canvas-locallearned"
+                      width={500}
+                      height={500}
+                      pause
+                    />
+                  </Stack>
+                </Center>
+              }
+              {
+                <Center>
+                  <Stack align="center">
+                    <Title order={2}>Federated Prediction</Title>
+                    <div style={{ position: "relative" }}>
+                      <Pong
+                        id="canvas-fedlearned"
+                        width={500}
+                        height={500}
+                        pause
+                      />
+                      {!remoteConnected && (
+                        <Overlay blur={10} center>
+                          <Text size={"lg"}>Not connected</Text>
+                        </Overlay>
+                      )}
+                    </div>
+                  </Stack>
+                </Center>
+              }
             </Group>
           </Center>
         </Stack>

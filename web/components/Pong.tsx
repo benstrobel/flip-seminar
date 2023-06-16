@@ -5,6 +5,7 @@ interface PongProps {
   width: number;
   height: number;
   inputEnabled?: boolean;
+  pause?: boolean;
 }
 
 interface Player {
@@ -30,6 +31,7 @@ interface Ball {
 interface GameState {
   stop: boolean;
   tick: number;
+  timeAtLastMeasurement: number;
   p0: Player;
   ball: Ball;
   wall: Wall;
@@ -45,17 +47,16 @@ const ball_size = 10;
 const player_speed = 6;
 const initial_ball_speed = 8;
 
-let tickcounter = 0;
-let wasSetup = false;
-
 export default function Pong({
   id,
   width,
   height,
   inputEnabled = false,
+  pause = false,
 }: PongProps) {
   const [state, setState] = useState<GameState>({
     stop: false,
+    timeAtLastMeasurement: 0,
     tick: 0,
     p0: { score: 0, x: 25, y: 250 },
     ball: {
@@ -69,9 +70,6 @@ export default function Pong({
   });
 
   useEffect(() => {
-    const canvas = document.getElementById(id)! as HTMLCanvasElement;
-    const ctx = canvas.getContext("2d")!;
-    setState((state) => ({ ...state, ctx: ctx }));
     if (inputEnabled) {
       window.addEventListener("keydown", inputPressed);
       window.addEventListener("keyup", inputReleased);
@@ -83,78 +81,71 @@ export default function Pong({
     };
   }, [id]);
 
-  useEffect(() => {
-    if (wasSetup) return;
-    wasSetup = true;
-    console.log("setup");
-    setInterval(() => {
-      console.log("tps: " + tickcounter);
-      tickcounter = 0;
-    }, 1000);
-  }, []);
-
-  const logicTick = useCallback(() => {
-    // Handling player input
-    if (state.input > 0) {
-      if (state.p0.y + player_y_size / 2 + player_speed <= height) {
-        state.p0.y += player_speed;
+  const logicTick = useCallback(
+    (state: GameState) => {
+      // Handling player input
+      if (state.input > 0) {
+        if (state.p0.y + player_y_size / 2 + player_speed <= height) {
+          state.p0.y += player_speed;
+        }
+      } else if (state.input < 0) {
+        if (state.p0.y - player_y_size / 2 - player_speed >= 0) {
+          state.p0.y -= player_speed;
+        }
       }
-    } else if (state.input < 0) {
-      if (state.p0.y - player_y_size / 2 - player_speed >= 0) {
-        state.p0.y -= player_speed;
+
+      // Handling ball movement
+      let newBallX = state.ball.x + state.ball.speedX;
+      let newBallY = state.ball.y + state.ball.speedY;
+      let newBallSpeedX = state.ball.speedX;
+      let newBallSpeedY = state.ball.speedY;
+      // Hit border
+      if (newBallY + ball_size / 2 >= height) {
+        newBallSpeedY = -newBallSpeedY;
+      } else if (newBallY - ball_size / 2 <= 0) {
+        newBallSpeedY = -newBallSpeedY;
       }
-    }
+      // Hit goal
+      if (newBallX <= 0) {
+        newBallX = 250;
+        newBallY = 250;
+        newBallSpeedX = initial_ball_speed / 2;
+        newBallSpeedY = Math.random() * initial_ball_speed;
+      }
+      // Hit wall
+      if (
+        state.wall.x < newBallX &&
+        newBallX < state.wall.x + state.wall.w &&
+        state.wall.y < newBallY &&
+        newBallY < state.wall.y + state.wall.h
+      ) {
+        newBallSpeedX = -newBallSpeedX;
+        newBallSpeedY = (Math.random() * 0.5 + 0.75) * newBallSpeedY;
+      }
+      // Hit player
+      if (
+        state.p0.x - player_x_size / 2 < newBallX &&
+        newBallX < state.p0.x - player_x_size / 2 + player_x_size &&
+        state.p0.y - player_y_size / 2 < newBallY &&
+        newBallY < state.p0.y - player_y_size / 2 + player_y_size
+      ) {
+        newBallSpeedX = -newBallSpeedX;
+        newBallSpeedY = (Math.random() * 0.5 + 0.75) * newBallSpeedY;
+      }
 
-    // Handling ball movement
-    let newBallX = state.ball.x + state.ball.speedX;
-    let newBallY = state.ball.y + state.ball.speedY;
-    let newBallSpeedX = state.ball.speedX;
-    let newBallSpeedY = state.ball.speedY;
-    // Hit border
-    if (newBallY + ball_size / 2 >= height) {
-      newBallSpeedY = -newBallSpeedY;
-    } else if (newBallY - ball_size / 2 <= 0) {
-      newBallSpeedY = -newBallSpeedY;
-    }
-    // Hit goal
-    if (newBallX <= 0) {
-      newBallX = 250;
-      newBallY = 250;
-      newBallSpeedX = initial_ball_speed / 2;
-      newBallSpeedY = Math.random() * initial_ball_speed;
-    }
-    // Hit wall
-    if (
-      state.wall.x < newBallX &&
-      newBallX < state.wall.x + state.wall.w &&
-      state.wall.y < newBallY &&
-      newBallY < state.wall.y + state.wall.h
-    ) {
-      newBallSpeedX = -newBallSpeedX;
-      newBallSpeedY = (Math.random() * 0.5 + 0.75) * newBallSpeedY;
-    }
-    // Hit player
-    if (
-      state.p0.x - player_x_size / 2 < newBallX &&
-      newBallX < state.p0.x - player_x_size / 2 + player_x_size &&
-      state.p0.y - player_y_size / 2 < newBallY &&
-      newBallY < state.p0.y - player_y_size / 2 + player_y_size
-    ) {
-      newBallSpeedX = -newBallSpeedX;
-      newBallSpeedY = (Math.random() * 0.5 + 0.75) * newBallSpeedY;
-    }
-
-    // Update state
-    setState((state) => ({
-      ...state,
-      ball: {
-        x: newBallX,
-        y: newBallY,
-        speedX: newBallSpeedX,
-        speedY: newBallSpeedY,
-      },
-    }));
-  }, [state, height]);
+      // Update state
+      setState((state) => ({
+        ...state,
+        ball: {
+          x: newBallX,
+          y: newBallY,
+          speedX: newBallSpeedX,
+          speedY: newBallSpeedY,
+        },
+      }));
+    },
+    [height]
+  );
 
   const inputPressed = useCallback((event: KeyboardEvent) => {
     let up = event.key === "w" || event.key === "ArrowUp";
@@ -180,58 +171,83 @@ export default function Pong({
     }
   }, []);
 
-  const renderCanvas = useCallback(() => {
-    if (!state.ctx) return;
-
-    // Render background
-    state.ctx.rect(0, 0, width, height);
-    state.ctx.fillStyle = "black";
-    state.ctx.fill();
-
-    // Render player
-    state.ctx.fillStyle = "white";
-    state.ctx.fillRect(
-      state.p0.x - player_x_size / 2,
-      state.p0.y - player_y_size / 2,
-      player_x_size,
-      player_y_size
-    );
-
-    // Render ball
-    state.ctx.fillStyle = "#D0D3D4";
-    state.ctx.fillRect(
-      state.ball.x - ball_size / 2,
-      state.ball.y - ball_size / 2,
-      ball_size,
-      ball_size
-    );
-
-    // Render wall
-    state.ctx.fillStyle = "gray";
-    state.ctx.fillRect(state.wall.x, state.wall.y, state.wall.w, state.wall.h);
-  }, [state.ctx, state.p0, state.ball]);
-
-  const tick = useCallback(async () => {
-    tickcounter += 1;
-    const start = performance.now();
-    logicTick();
-    renderCanvas();
-    const elapsed = performance.now() - start;
-    if (ms_per_tick - elapsed < 0) {
-      console.log("Cant keep up: " + (ms_per_tick - elapsed));
-    }
-    if (ms_per_tick - elapsed < 0) {
-      console.log("Cant keep up: " + (ms_per_tick - elapsed));
-    }
-    const timeout = setTimeout(() => {
-      setState((state) => ({ ...state, tick: state.tick + 1 }));
-      clearTimeout(timeout);
-    }, Math.max(ms_per_tick - elapsed, 0));
-  }, [logicTick, renderCanvas]);
+  const tick = useCallback(
+    async (state: GameState) => {
+      const start = performance.now();
+      logicTick(state);
+      const elapsed = performance.now() - start;
+      if (ms_per_tick - elapsed < 0) {
+        console.log("Cant keep up: " + (ms_per_tick - elapsed));
+      }
+      const timeout = setTimeout(() => {
+        setState((state) => ({ ...state, tick: state.tick + 1 }));
+        clearTimeout(timeout);
+      }, Math.max(ms_per_tick - elapsed, 0));
+    },
+    [logicTick]
+  );
 
   useEffect(() => {
-    tick();
-  }, [state.tick]);
+    if (!pause) {
+      if (state.tick % ticks_per_second === 0 && !pause) {
+        console.log(
+          id +
+            " tps: " +
+            ticks_per_second /
+              ((performance.now() - state.timeAtLastMeasurement) / 1000)
+        );
+        setState((state) => ({
+          ...state,
+          timeAtLastMeasurement: performance.now(),
+        }));
+      }
+      tick(state);
+    }
+  }, [state.tick, pause]);
 
-  return <canvas id={id} width={width} height={height}></canvas>;
+  // return <canvas id={id} width={width} height={height}></canvas>;
+  return (
+    <div
+      style={{
+        width: width,
+        height: height,
+        backgroundColor: "black",
+        position: "relative",
+      }}
+    >
+      <div
+        id="player"
+        style={{
+          position: "absolute",
+          backgroundColor: "white",
+          left: state.p0.x - player_x_size / 2,
+          top: state.p0.y - player_y_size / 2,
+          width: player_x_size,
+          height: player_y_size,
+        }}
+      />
+      <div
+        id="ball"
+        style={{
+          position: "absolute",
+          backgroundColor: "white",
+          left: state.ball.x - ball_size / 2,
+          top: state.ball.y - ball_size / 2,
+          width: ball_size,
+          height: ball_size,
+        }}
+      />
+      <div
+        id="wall"
+        style={{
+          position: "absolute",
+          backgroundColor: "white",
+          left: state.wall.x,
+          top: state.wall.y,
+          width: state.wall.w,
+          height: state.wall.h,
+        }}
+      />
+    </div>
+  );
 }
