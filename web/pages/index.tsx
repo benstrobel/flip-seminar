@@ -1,18 +1,64 @@
 import { Center, Stack, Title } from "@mantine/core";
 import Head from "next/head";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import images from "@/data/images.json";
-import styles from "@/data/styles.json";
+import importedStyles from "@/data/styles.json";
+import categories from "@/data/categories.json";
+import Swiper from "@/components/Swiper";
+
+export interface Categories {
+  gender: "Men" | "Women" | "Unisex" | "Boys" | "Girls";
+  masterCategory:
+    | "Apparel"
+    | "Accessories"
+    | "Footwear"
+    | "Personal Care"
+    | "Free Items";
+  subCategory: "Topwear" | "Shoes" | "Bags" | "Bottomwear" | "Watches";
+  articleType:
+    | "Tshirts"
+    | "Shirts"
+    | "Casual Shoes"
+    | "Watches"
+    | "Sports Shoes";
+  baseColour: "Black" | "White" | "Blue" | "Brown" | "Grey";
+  season: "Summer" | "Fall" | "Winter" | "Spring";
+  usage: "Casual" | "Sports" | "Ethnic" | "Formal" | "NA";
+}
+
+export type Style = Categories & {
+  id: number;
+  year: number;
+  productDisplayName: string;
+};
+
+export interface Sample {
+  style: Style;
+  pos: boolean;
+}
+
+export interface ApplicationState {
+  currentIndex: number;
+  samples: Sample[];
+  nextImageLoading: boolean;
+}
+
+const maxItemIndex = images.length;
 
 export default function Home() {
-  useEffect(() => {
-    window.addEventListener("click", onClick);
-    return () => {
-      window.removeEventListener("click", onClick);
-    };
+  const styles = importedStyles as Style[];
+  const [appState, setAppState] = useState<ApplicationState>({
+    currentIndex: Math.round(Math.random() * maxItemIndex),
+    samples: [],
+    nextImageLoading: false,
+  });
+  const sampleCallback = useCallback(() => {
+    setAppState((state) => ({
+      ...state,
+      currentIndex: Math.round(Math.random() * maxItemIndex),
+      nextImageLoading: true,
+    }));
   }, []);
-
-  function onClick(ev: MouseEvent) {}
 
   return (
     <div>
@@ -28,7 +74,15 @@ export default function Home() {
             <Title>Demo of asynchronous federated learning in websites</Title>
           </Center>
           <Center style={{ height: "80vh" }}>
-            <></>
+            <Swiper
+              imageUrl={images[appState.currentIndex].link}
+              style={styles[appState.currentIndex]}
+              sampleCallback={sampleCallback}
+              loading={appState.nextImageLoading}
+              onLoad={() => {
+                setAppState((state) => ({ ...state, nextImageLoading: false }));
+              }}
+            />
           </Center>
         </Stack>
       </main>
