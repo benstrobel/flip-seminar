@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 interface PongProps {
   id: string;
@@ -6,6 +13,11 @@ interface PongProps {
   height: number;
   inputEnabled?: boolean;
   pause?: boolean;
+  debug?: boolean;
+  state: GameState;
+  setState: Dispatch<SetStateAction<GameState>>;
+  sampleRate?: number;
+  sampleProviderCallback?: (sample: Sample) => void;
 }
 
 interface Player {
@@ -28,7 +40,15 @@ interface Ball {
   speedY: number;
 }
 
-interface GameState {
+interface Sample {
+  gameState: {
+    playerBallVec: { x: number; y: number };
+    playerBallDistance: number;
+  };
+  resultInput: number;
+}
+
+export interface GameState {
   stop: boolean;
   tick: number;
   timeAtLastMeasurement: number;
@@ -45,7 +65,18 @@ const player_x_size = 15;
 const player_y_size = 50;
 const ball_size = 10;
 const player_speed = 6;
-const initial_ball_speed = 8;
+export const initial_ball_speed = 8;
+
+function normalizeVector(vec: { x: number; y: number }): {
+  x: number;
+  y: number;
+} {
+  const magnitude = Math.sqrt(Math.pow(vec.x, 2) + Math.pow(vec.y, 2));
+  return {
+    x: vec.x / magnitude,
+    y: vec.y / magnitude,
+  };
+}
 
 export default function Pong({
   id,
@@ -53,22 +84,12 @@ export default function Pong({
   height,
   inputEnabled = false,
   pause = false,
+  debug = false,
+  state,
+  setState,
+  sampleRate,
+  sampleProviderCallback,
 }: PongProps) {
-  const [state, setState] = useState<GameState>({
-    stop: false,
-    timeAtLastMeasurement: 0,
-    tick: 0,
-    p0: { score: 0, x: 25, y: 250 },
-    ball: {
-      speedX: initial_ball_speed / 2,
-      speedY: Math.random() * initial_ball_speed + 2,
-      x: 250,
-      y: 250,
-    },
-    wall: { x: 450, y: 0, w: 25, h: 500 },
-    input: 0,
-  });
-
   useEffect(() => {
     if (inputEnabled) {
       window.addEventListener("keydown", inputPressed);
@@ -80,6 +101,10 @@ export default function Pong({
       window.removeEventListener("keyup", inputReleased);
     };
   }, [id]);
+
+  const maxDistance = useMemo(() => {
+    return Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2));
+  }, [height, width]);
 
   const logicTick = useCallback(
     (state: GameState) => {
@@ -131,6 +156,32 @@ export default function Pong({
       ) {
         newBallSpeedX = -newBallSpeedX;
         newBallSpeedY = (Math.random() * 0.5 + 0.75) * newBallSpeedY;
+      }
+
+      // Push sample
+      if (
+        sampleRate &&
+        sampleProviderCallback &&
+        state.tick % sampleRate === 0
+      ) {
+        const vec = {
+          x: state.ball.x - state.p0.x,
+          y: state.ball.y - state.p0.y,
+        };
+        const normalizedVec = normalizeVector(vec);
+        const distance =
+          Math.sqrt(
+            Math.pow(state.ball.x - state.p0.x, 2) +
+              Math.pow(state.ball.y - state.p0.y, 2)
+          ) / maxDistance;
+
+        sampleProviderCallback({
+          gameState: {
+            playerBallDistance: distance,
+            playerBallVec: normalizedVec,
+          },
+          resultInput: state.input,
+        });
       }
 
       // Update state
@@ -189,7 +240,7 @@ export default function Pong({
 
   useEffect(() => {
     if (!pause) {
-      if (state.tick % ticks_per_second === 0 && !pause) {
+      if (state.tick % ticks_per_second === 0 && !pause && debug) {
         console.log(
           id +
             " tps: " +

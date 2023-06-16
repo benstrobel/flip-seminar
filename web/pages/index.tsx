@@ -10,13 +10,38 @@ import {
 } from "@mantine/core";
 import Head from "next/head";
 import { test } from "@/lib/learning";
-import Pong from "@/components/Pong";
+import Pong, { GameState, initial_ball_speed } from "@/components/Pong";
 import { useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
+function getInitState(): GameState {
+  return {
+    stop: false,
+    timeAtLastMeasurement: 0,
+    tick: 0,
+    p0: { score: 0, x: 25, y: 250 },
+    ball: {
+      speedX: initial_ball_speed / 2,
+      speedY: Math.random() * initial_ball_speed + 2,
+      x: 250,
+      y: 250,
+    },
+    wall: { x: 450, y: 0, w: 25, h: 500 },
+    input: 0,
+  };
+}
+
 export default function Home() {
   const [remoteConnected, setRemoteConnected] = useState(false);
+  const [groundTruthState, setGroundTruthState] = useState<GameState>(
+    getInitState()
+  );
+  const [localPredictionState, setLocalPredictionState] = useState<GameState>(
+    getInitState()
+  );
+  const [federatedPredictionState, setFederatedPredictionState] =
+    useState<GameState>(getInitState());
 
   return (
     <div>
@@ -41,6 +66,12 @@ export default function Home() {
                     width={500}
                     height={500}
                     inputEnabled
+                    state={groundTruthState}
+                    setState={setGroundTruthState}
+                    sampleRate={10}
+                    sampleProviderCallback={(sample) => {
+                      console.log(JSON.stringify(sample));
+                    }}
                   />
                 </Stack>
               </Center>
@@ -52,7 +83,8 @@ export default function Home() {
                       id="canvas-locallearned"
                       width={500}
                       height={500}
-                      pause
+                      state={localPredictionState}
+                      setState={setLocalPredictionState}
                     />
                   </Stack>
                 </Center>
@@ -66,7 +98,8 @@ export default function Home() {
                         id="canvas-fedlearned"
                         width={500}
                         height={500}
-                        pause
+                        state={federatedPredictionState}
+                        setState={setFederatedPredictionState}
                       />
                       {!remoteConnected && (
                         <Overlay blur={10} center>
