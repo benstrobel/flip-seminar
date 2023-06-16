@@ -166,7 +166,8 @@ export default function Pong({
       if (state.model) {
         modelInput = await modelPredict(
           state.model,
-          stateToSampleGameState(state, maxDistance)
+          stateToSampleGameState(state, maxDistance),
+          false
         );
       }
 

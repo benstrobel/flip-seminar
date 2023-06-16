@@ -9,7 +9,7 @@ import {
   Text,
 } from "@mantine/core";
 import Head from "next/head";
-import { getModel, test, trainModel } from "@/lib/learning";
+import { getModel, trainModel } from "@/lib/learning";
 import Pong, { GameState, Sample, initial_ball_speed } from "@/components/Pong";
 import { useEffect, useState } from "react";
 
