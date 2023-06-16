@@ -29,7 +29,7 @@ export default function Swiper({
   return (
     <Stack>
       <Center>
-        <Text size={"lg"}>Would you buy this fashion product?</Text>
+        <Text size={"lg"}>Would you wear/use this fashion product?</Text>
       </Center>
       <Card shadow="sm" radius={"md"} withBorder>
         <Card.Section style={{ position: "relative" }}>
@@ -38,8 +38,9 @@ export default function Swiper({
             height={"40vh"}
             onLoad={onLoad}
             alt={style.productDisplayName}
+            style={{ minHeight: "40vh", minWidth: "30vh" }}
           />
-          <LoadingOverlay visible={loading} />
+          <LoadingOverlay visible={loading} color="green" />
         </Card.Section>
         <Group position="center" style={{}}>
           <Group style={{ width: "40%", marginTop: "15px" }} position="apart">

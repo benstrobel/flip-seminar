@@ -1,10 +1,11 @@
-import { Center, Stack, Title } from "@mantine/core";
+import { Center, Group, Stack, Title } from "@mantine/core";
 import Head from "next/head";
 import { useCallback, useEffect, useState } from "react";
 import images from "@/data/images.json";
 import importedStyles from "@/data/styles.json";
 import categories from "@/data/categories.json";
 import Swiper from "@/components/Swiper";
+import Stats from "@/components/Stats";
 
 export interface Categories {
   gender: "Men" | "Women" | "Unisex" | "Boys" | "Girls";
@@ -37,10 +38,18 @@ export interface Sample {
   pos: boolean;
 }
 
+export interface StatsData {
+  colorStatData: number[];
+  seasonStatData: number[];
+  usageStatDat: number[];
+}
+
 export interface ApplicationState {
   currentIndex: number;
   samples: Sample[];
   nextImageLoading: boolean;
+  localStatsData: StatsData;
+  remoteStatsData: StatsData;
 }
 
 const maxItemIndex = images.length;
@@ -50,7 +59,17 @@ export default function Home() {
   const [appState, setAppState] = useState<ApplicationState>({
     currentIndex: Math.round(Math.random() * maxItemIndex),
     samples: [],
-    nextImageLoading: false,
+    nextImageLoading: true,
+    localStatsData: {
+      colorStatData: [0, 0, 0, 0, 0],
+      seasonStatData: [0, 0, 0, 0],
+      usageStatDat: [0, 0, 0, 0, 0],
+    },
+    remoteStatsData: {
+      colorStatData: [0, 0, 0, 0, 0],
+      seasonStatData: [0, 0, 0, 0],
+      usageStatDat: [0, 0, 0, 0, 0],
+    },
   });
   const sampleCallback = useCallback(() => {
     setAppState((state) => ({
@@ -74,15 +93,29 @@ export default function Home() {
             <Title>Demo of asynchronous federated learning in websites</Title>
           </Center>
           <Center style={{ height: "80vh" }}>
-            <Swiper
-              imageUrl={images[appState.currentIndex].link}
-              style={styles[appState.currentIndex]}
-              sampleCallback={sampleCallback}
-              loading={appState.nextImageLoading}
-              onLoad={() => {
-                setAppState((state) => ({ ...state, nextImageLoading: false }));
-              }}
-            />
+            <Group>
+              <Stats
+                statsData={appState.localStatsData}
+                name="Local Prediction"
+              />
+              <Swiper
+                imageUrl={images[appState.currentIndex].link}
+                style={styles[appState.currentIndex]}
+                sampleCallback={sampleCallback}
+                loading={appState.nextImageLoading}
+                onLoad={() => {
+                  setAppState((state) => ({
+                    ...state,
+                    nextImageLoading: false,
+                  }));
+                }}
+              />
+              <Stats
+                name="Federated Prediction"
+                statsData={appState.remoteStatsData}
+                disabled
+              />
+            </Group>
           </Center>
         </Stack>
       </main>
