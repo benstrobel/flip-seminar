@@ -5,7 +5,10 @@ export function getModel() {
   const model = tf.sequential();
   model.add(tf.layers.dense({ units: 4, inputShape: [3] }));
   model.add(tf.layers.dense({ units: 3, inputShape: [4] }));
-  model.compile({ loss: tf.losses.sigmoidCrossEntropy, optimizer: "sgd" });
+  model.compile({
+    loss: tf.losses.sigmoidCrossEntropy,
+    optimizer: "sgd",
+  });
   return model;
 }
 

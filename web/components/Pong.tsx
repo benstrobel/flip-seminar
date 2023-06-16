@@ -189,8 +189,12 @@ export default function Pong({
       // Hit border
       if (newBallY + ball_size / 2 >= height) {
         newBallSpeedY = -newBallSpeedY;
+        newBallX = state.ball.x;
+        newBallY = state.ball.y;
       } else if (newBallY - ball_size / 2 <= 0) {
         newBallSpeedY = -newBallSpeedY;
+        newBallX = state.ball.x;
+        newBallY = state.ball.y;
       }
       // Hit goal
       if (newBallX <= 0) {
@@ -206,6 +210,8 @@ export default function Pong({
         state.wall.y < newBallY &&
         newBallY < state.wall.y + state.wall.h
       ) {
+        newBallX = state.ball.x;
+        newBallY = state.ball.y;
         newBallSpeedX = -newBallSpeedX;
         newBallSpeedY = (Math.random() * 0.5 + 0.75) * newBallSpeedY;
       }
