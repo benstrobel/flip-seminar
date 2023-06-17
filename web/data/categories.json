@@ -17,5 +17,13 @@
   ],
   "baseColour": ["Black", "White", "Blue", "Brown", "Grey"],
   "season": ["Summer", "Fall", "Winter", "Spring"],
-  "usage": ["Casual", "Sports", "Ethnic", "Formal", "NA"]
+  "usage": [
+    "Casual",
+    "Sports",
+    "Ethnic",
+    "Formal",
+    "NA",
+    "Party",
+    "Smart Casual"
+  ]
 }

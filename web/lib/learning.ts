@@ -3,7 +3,7 @@ import * as tf from "@tensorflow/tfjs";
 
 export function getModel() {
   const model = tf.sequential();
-  model.add(tf.layers.dense({ units: 20, inputShape: [34] }));
+  model.add(tf.layers.dense({ units: 20, inputShape: [36] }));
   model.add(tf.layers.dense({ units: 10, inputShape: [20] }));
   model.add(tf.layers.dense({ units: 2, inputShape: [10] }));
   model.compile({
@@ -16,7 +16,7 @@ export function getModel() {
 export async function trainModel(model: tf.Sequential, samples: Sample[]) {
   const xs = tf.tensor2d(
     samples.map((x) => styleToModelInput(x.style)),
-    [samples.length, 34]
+    [samples.length, 36]
   );
   const ys = tf.tensor2d(
     samples.map((x) => [Number(x.pos === true), Number(x.pos === false)]),
@@ -29,7 +29,7 @@ export async function trainModel(model: tf.Sequential, samples: Sample[]) {
 
 export async function modelPredict(model: tf.Sequential, input: Style) {
   const prediction = model.predict(
-    tf.tensor2d(styleToModelInput(input), [1, 34])
+    tf.tensor2d(styleToModelInput(input), [1, 36])
   ) as tf.Tensor<tf.Rank>;
   const data = await prediction.as1D().data();
   return data[0] > data[1];
@@ -42,7 +42,7 @@ export async function modelBulkPredict(
   const predictions = model.predict(
     tf.tensor2d(
       bulkInput.map((x) => styleToModelInput(x)),
-      [bulkInput.length, 34]
+      [bulkInput.length, 36]
     )
   ) as tf.Tensor<tf.Rank>;
   console.log("counting");
@@ -55,15 +55,17 @@ async function bulkPredictionToStatsData(
 ): Promise<StatsData> {
   const colorStatData = [0, 0, 0, 0, 0];
   const seasonStatData = [0, 0, 0, 0];
-  const usageStatData = [0, 0, 0, 0, 0];
+  const usageStatData = [0, 0, 0, 0, 0, 0, 0];
 
   const output = bulkOutput.as2D(bulkInput.length, 2);
+  const data = await output.slice(0, bulkInput.length).data();
 
-  for (let i = 0; i < bulkInput.length; i++) {
+  for (let i = 0; i < bulkInput.length; i = i + 2) {
+    const posClassProbability = data[i + 0];
+    const negClassProbability = data[i + 1];
     const input = bulkInput[i];
-    const data = await output.slice(i, 1).data();
 
-    if (data[0] > data[1]) {
+    if (posClassProbability > negClassProbability) {
       if (input.baseColour === "Black") {
         colorStatData[0] += 1;
       }
@@ -108,6 +110,12 @@ async function bulkPredictionToStatsData(
       if (input.usage === "NA") {
         usageStatData[4] += 1;
       }
+      if (input.usage === "Party") {
+        usageStatData[5] += 1;
+      }
+      if (input.usage === "Smart Casual") {
+        usageStatData[6] += 1;
+      }
     }
   }
 
@@ -119,7 +127,7 @@ async function bulkPredictionToStatsData(
 }
 
 function styleToModelInput(style: Style): number[] {
-  const input = new Array<number>(34);
+  const input = new Array<number>(36);
 
   input[0] = Number(style.gender === "Men");
   input[1] = Number(style.gender === "Women");
@@ -161,6 +169,8 @@ function styleToModelInput(style: Style): number[] {
   input[31] = Number(style.usage === "Ethnic");
   input[32] = Number(style.usage === "Formal");
   input[33] = Number(style.usage === "NA");
+  input[34] = Number(style.usage === "Party");
+  input[35] = Number(style.usage === "Smart Casual");
 
   return input;
 }

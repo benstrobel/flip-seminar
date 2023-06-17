@@ -91,6 +91,14 @@ export default function Stats({
       label: "NA",
       value: statsData.usageStatData[4],
     },
+    {
+      label: "Party",
+      value: statsData.usageStatData[5],
+    },
+    {
+      label: "Smart Casual",
+      value: statsData.usageStatData[6],
+    },
   ];
 
   return (

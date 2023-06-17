@@ -26,7 +26,14 @@ export interface Categories {
     | "Sports Shoes";
   baseColour: "Black" | "White" | "Blue" | "Brown" | "Grey";
   season: "Summer" | "Fall" | "Winter" | "Spring";
-  usage: "Casual" | "Sports" | "Ethnic" | "Formal" | "NA";
+  usage:
+    | "Casual"
+    | "Sports"
+    | "Ethnic"
+    | "Formal"
+    | "NA"
+    | "Party"
+    | "Smart Casual";
 }
 
 export type Style = Categories & {
@@ -72,7 +79,7 @@ export default function Home() {
     remoteStatsData: {
       colorStatData: [0, 0, 0, 0, 0],
       seasonStatData: [0, 0, 0, 0],
-      usageStatData: [0, 0, 0, 0, 0],
+      usageStatData: [0, 0, 0, 0, 0, 0, 0],
     },
     model: getModel(),
   });
