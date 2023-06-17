@@ -104,7 +104,7 @@ export default function Home() {
         const newLocalStats = await modelBulkPredict(newModel, styles);
         setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
         console.log("Updated local model");
-        pushModel(newModel);
+        await pushModel(newModel);
       } else {
         setAppState((state) => ({
           ...state,

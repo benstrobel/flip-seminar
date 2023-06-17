@@ -1,4 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
+import { encodeWeights } from "./learning";
 
 const baseUrl = "localhost:1337";
 const websocketUrl = "ws://" + baseUrl;
@@ -9,11 +10,9 @@ export function connect(connectedCallback: () => void) {
   ws.onopen = connectedCallback;
 }
 
-export function pushModel(model: tf.Sequential) {
+export async function pushModel(model: tf.Sequential) {
   if (ws && ws.OPEN) {
-    model.save("http://" + baseUrl + "/model").catch((ex) => {
-      console.error(ex);
-    });
+    ws.send(await encodeWeights(model));
   }
 }
 

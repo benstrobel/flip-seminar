@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import { WebSocket } from "ws";
-import { getModel } from "../web/lib/learning";
+import { applyDecodedWeights, getModel } from "../web/lib/learning";
 import * as tf from "@tensorflow/tfjs-node";
 import fileUpload from "express-fileupload";
 import fs from "fs";
@@ -29,9 +29,9 @@ app.use(cors());
 let model = getModel();
 let clientModels: tf.Sequential[] = [];
 
-async function receiveModel(model: tf.Sequential) {
+async function receiveModel(receivedModel: tf.Sequential) {
   console.log("received client model " + (clientModels.length + 1));
-  clientModels.push(model);
+  clientModels.push(receivedModel);
   if (clientModels.length >= modelThreshold) {
     const currentWeights = model.getWeights();
     const clientWeights = clientModels.map((x) => x.getWeights());
@@ -54,25 +54,13 @@ async function pushModel(model: tf.Sequential) {
   });
 }
 
-wss.on("connection", function (ws) {});
-
-app.post("/model", async (req: Request, res: Response) => {
-  console.log("received model ");
-  const files = req.files;
-  if (!files) return;
-  const json = files["model.json"] as fileUpload.UploadedFile;
-  const foldername = "./tmp/" + Math.random() * 1000000000;
-  fs.mkdirSync(foldername);
-  await json.mv("./" + foldername + "/" + "model.json");
-  const bin = files["model.weights.bin"] as fileUpload.UploadedFile;
-  await bin.mv("./" + foldername + "/" + "model.weights.bin");
-  const model = await tf.loadLayersModel(
-    tf.io.fileSystem("./" + foldername + "/" + "model.json")
-  );
-  fs.unlinkSync("./" + foldername + "/" + "model.json");
-  fs.unlinkSync("./" + foldername + "/" + "model.weights.bin");
-  receiveModel(model as tf.Sequential);
-  res.send("");
+wss.on("connection", function (ws) {
+  ws.onmessage = (event) => {
+    console.log("received model ");
+    const receivedModel = getModel();
+    applyDecodedWeights(event.data as string, receivedModel);
+    receiveModel(receivedModel);
+  };
 });
 
 const server = app.listen(port, () => {
