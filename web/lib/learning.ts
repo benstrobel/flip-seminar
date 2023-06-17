@@ -45,7 +45,7 @@ export async function modelBulkPredict(
       [bulkInput.length, 34]
     )
   ) as tf.Tensor<tf.Rank>;
-
+  console.log("counting");
   return bulkPredictionToStatsData(bulkInput, predictions);
 }
 
