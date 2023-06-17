@@ -53,7 +53,7 @@ export function getModel() {
   model.add(tf.layers.dense({ units: 2, inputShape: [10] }));
   model.compile({
     loss: tf.losses.sigmoidCrossEntropy,
-    optimizer: new tf.SGDOptimizer(0.4),
+    optimizer: new tf.SGDOptimizer(0.01),
   });
   return model;
 }
@@ -98,8 +98,13 @@ async function bulkPredictionToStatsData(
   bulkOutput: tf.Tensor<tf.Rank>
 ): Promise<StatsData> {
   const colorStatData = [0, 0, 0, 0, 0];
+  const totalColorSampleCount = [0, 0, 0, 0, 0];
+
   const seasonStatData = [0, 0, 0, 0];
+  const totalSeasonSampleCount = [0, 0, 0, 0];
+
   const usageStatData = [0, 0, 0, 0, 0, 0, 0];
+  const totalUsageSampleCount = [0, 0, 0, 0, 0, 0, 0];
 
   const output = bulkOutput.as2D(bulkInput.length, 2);
   const data = await output.slice(0, bulkInput.length).data();
@@ -109,64 +114,90 @@ async function bulkPredictionToStatsData(
     const negClassProbability = data[i + 1];
     const input = bulkInput[i];
 
-    if (posClassProbability > negClassProbability) {
-      if (input.baseColour === "Black") {
-        colorStatData[0] += 1;
-      }
-      if (input.baseColour === "White") {
-        colorStatData[1] += 1;
-      }
-      if (input.baseColour === "Blue") {
-        colorStatData[2] += 1;
-      }
-      if (input.baseColour === "Brown") {
-        colorStatData[3] += 1;
-      }
-      if (input.baseColour === "Grey") {
-        colorStatData[4] += 1;
-      }
+    if (input.baseColour === "Black") {
+      if (posClassProbability > negClassProbability) colorStatData[0] += 1;
+      totalColorSampleCount[0] += 1;
+    }
+    if (input.baseColour === "White") {
+      if (posClassProbability > negClassProbability) colorStatData[1] += 1;
+      totalColorSampleCount[1] += 1;
+    }
+    if (input.baseColour === "Blue") {
+      if (posClassProbability > negClassProbability) colorStatData[2] += 1;
+      totalColorSampleCount[2] += 1;
+    }
+    if (input.baseColour === "Brown") {
+      if (posClassProbability > negClassProbability) colorStatData[3] += 1;
+      totalColorSampleCount[3] += 1;
+    }
+    if (input.baseColour === "Grey") {
+      if (posClassProbability > negClassProbability) colorStatData[4] += 1;
+      totalColorSampleCount[4] += 1;
+    }
 
-      if (input.season === "Summer") {
-        seasonStatData[0] += 1;
-      }
-      if (input.season === "Fall") {
-        seasonStatData[1] += 1;
-      }
-      if (input.season === "Winter") {
-        seasonStatData[2] += 1;
-      }
-      if (input.season === "Spring") {
-        seasonStatData[3] += 1;
-      }
+    if (input.season === "Summer") {
+      if (posClassProbability > negClassProbability) seasonStatData[0] += 1;
+      totalSeasonSampleCount[0] += 1;
+    }
+    if (input.season === "Fall") {
+      if (posClassProbability > negClassProbability) seasonStatData[1] += 1;
+      totalSeasonSampleCount[1] += 1;
+    }
+    if (input.season === "Winter") {
+      if (posClassProbability > negClassProbability) seasonStatData[2] += 1;
+      totalSeasonSampleCount[2] += 1;
+    }
+    if (input.season === "Spring") {
+      if (posClassProbability > negClassProbability) seasonStatData[3] += 1;
+      totalSeasonSampleCount[3] += 1;
+    }
 
-      if (input.usage === "Casual") {
-        usageStatData[0] += 1;
-      }
-      if (input.usage === "Sports") {
-        usageStatData[1] += 1;
-      }
-      if (input.usage === "Ethnic") {
-        usageStatData[2] += 1;
-      }
-      if (input.usage === "Formal") {
-        usageStatData[3] += 1;
-      }
-      if (input.usage === "NA") {
-        usageStatData[4] += 1;
-      }
-      if (input.usage === "Party") {
-        usageStatData[5] += 1;
-      }
-      if (input.usage === "Smart Casual") {
-        usageStatData[6] += 1;
-      }
+    if (input.usage === "Casual") {
+      if (posClassProbability > negClassProbability) usageStatData[0] += 1;
+      totalUsageSampleCount[0] += 1;
+    }
+    if (input.usage === "Sports") {
+      if (posClassProbability > negClassProbability) usageStatData[1] += 1;
+      totalUsageSampleCount[1] += 1;
+    }
+    if (input.usage === "Ethnic") {
+      if (posClassProbability > negClassProbability) usageStatData[2] += 1;
+      totalUsageSampleCount[2] += 1;
+    }
+    if (input.usage === "Formal") {
+      if (posClassProbability > negClassProbability) usageStatData[3] += 1;
+      totalUsageSampleCount[3] += 1;
+    }
+    if (input.usage === "NA") {
+      if (posClassProbability > negClassProbability) usageStatData[4] += 1;
+      totalUsageSampleCount[4] += 1;
+    }
+    if (input.usage === "Party") {
+      if (posClassProbability > negClassProbability) usageStatData[5] += 1;
+      totalUsageSampleCount[5] += 1;
+    }
+    if (input.usage === "Smart Casual") {
+      if (posClassProbability > negClassProbability) usageStatData[6] += 1;
+      totalUsageSampleCount[6] += 1;
     }
   }
 
   return {
-    colorStatData: colorStatData,
-    seasonStatData: seasonStatData,
-    usageStatData: usageStatData,
+    colorStatData: colorStatData.map((x, i) =>
+      Number.isNaN(totalColorSampleCount[i]) || totalColorSampleCount[i] === 0
+        ? 0
+        : (x * 1000) / totalColorSampleCount[i]
+    ),
+    seasonStatData: seasonStatData.map((x, i) =>
+      Number.isNaN(totalSeasonSampleCount[i]) || totalSeasonSampleCount[i] === 0
+        ? 0
+        : (x * 1000) / totalSeasonSampleCount[i]
+    ),
+    usageStatData: usageStatData.map((x, i) =>
+      Number.isNaN(totalUsageSampleCount[i]) || totalUsageSampleCount[i] === 0
+        ? 0
+        : (x * 1000) / totalUsageSampleCount[i]
+    ),
   };
 }
 
