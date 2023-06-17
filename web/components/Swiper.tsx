@@ -1,4 +1,4 @@
-import { Style } from "@/pages";
+import { Style } from "@/lib/learning";
 import {
   Card,
   Stack,

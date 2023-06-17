@@ -1,5 +1,50 @@
-import { Sample, StatsData, Style } from "@/pages";
 import * as tf from "@tensorflow/tfjs";
+
+export interface Categories {
+  gender: "Men" | "Women" | "Unisex" | "Boys" | "Girls";
+  masterCategory:
+    | "Apparel"
+    | "Accessories"
+    | "Footwear"
+    | "Personal Care"
+    | "Free Items";
+  subCategory: "Topwear" | "Shoes" | "Bags" | "Bottomwear" | "Watches";
+  articleType:
+    | "Tshirts"
+    | "Shirts"
+    | "Casual Shoes"
+    | "Watches"
+    | "Sports Shoes";
+  baseColour: "Black" | "White" | "Blue" | "Brown" | "Grey";
+  season: "Summer" | "Fall" | "Winter" | "Spring";
+  usage:
+    | "Casual"
+    | "Sports"
+    | "Ethnic"
+    | "Formal"
+    | "NA"
+    | "Party"
+    | "Smart Casual";
+}
+
+export type Style = Categories & {
+  id: number;
+  year: number;
+  productDisplayName: string;
+};
+
+export interface Sample {
+  style: Style;
+  pos: boolean;
+}
+
+export interface StatsData {
+  colorStatData: number[];
+  seasonStatData: number[];
+  usageStatData: number[];
+}
+
+export const sampleThreshold = 5;
 
 export function getModel() {
   const model = tf.sequential();
@@ -45,7 +90,6 @@ export async function modelBulkPredict(
       [bulkInput.length, 36]
     )
   ) as tf.Tensor<tf.Rank>;
-  console.log("counting");
   return bulkPredictionToStatsData(bulkInput, predictions);
 }
 

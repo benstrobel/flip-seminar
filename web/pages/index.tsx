@@ -3,55 +3,25 @@ import Head from "next/head";
 import { useCallback, useEffect, useState } from "react";
 import images from "@/data/images.json";
 import importedStyles from "@/data/styles.json";
-import categories from "@/data/categories.json";
 import Swiper from "@/components/Swiper";
 import Stats from "@/components/Stats";
+import {
+  Sample,
+  StatsData,
+  Style,
+  getModel,
+  modelBulkPredict,
+  sampleThreshold,
+  trainModel,
+} from "@/lib/learning";
+import {
+  connect,
+  pushModel,
+  registerDisconnectCallback,
+} from "@/lib/networking";
 import * as tf from "@tensorflow/tfjs";
-import { getModel, modelBulkPredict, trainModel } from "@/lib/learning";
 
-export interface Categories {
-  gender: "Men" | "Women" | "Unisex" | "Boys" | "Girls";
-  masterCategory:
-    | "Apparel"
-    | "Accessories"
-    | "Footwear"
-    | "Personal Care"
-    | "Free Items";
-  subCategory: "Topwear" | "Shoes" | "Bags" | "Bottomwear" | "Watches";
-  articleType:
-    | "Tshirts"
-    | "Shirts"
-    | "Casual Shoes"
-    | "Watches"
-    | "Sports Shoes";
-  baseColour: "Black" | "White" | "Blue" | "Brown" | "Grey";
-  season: "Summer" | "Fall" | "Winter" | "Spring";
-  usage:
-    | "Casual"
-    | "Sports"
-    | "Ethnic"
-    | "Formal"
-    | "NA"
-    | "Party"
-    | "Smart Casual";
-}
-
-export type Style = Categories & {
-  id: number;
-  year: number;
-  productDisplayName: string;
-};
-
-export interface Sample {
-  style: Style;
-  pos: boolean;
-}
-
-export interface StatsData {
-  colorStatData: number[];
-  seasonStatData: number[];
-  usageStatData: number[];
-}
+const maxItemIndex = images.length;
 
 export interface ApplicationState {
   currentIndex: number;
@@ -60,10 +30,8 @@ export interface ApplicationState {
   localStatsData: StatsData;
   remoteStatsData: StatsData;
   model: tf.Sequential;
+  connected: boolean;
 }
-
-const maxItemIndex = images.length;
-const sampleThreshold = 5;
 
 export default function Home() {
   const styles = importedStyles as Style[];
@@ -82,7 +50,18 @@ export default function Home() {
       usageStatData: [0, 0, 0, 0, 0, 0, 0],
     },
     model: getModel(),
+    connected: false,
   });
+
+  useEffect(() => {
+    connect(() => {
+      setAppState((state) => ({ ...state, connected: true }));
+    });
+    registerDisconnectCallback(() => {
+      setAppState((state) => ({ ...state, connected: false }));
+    });
+  }, []);
+
   const sampleCallback = useCallback(
     async (style: Style, pos: boolean) => {
       if (appState.samples.length >= sampleThreshold) {
@@ -93,13 +72,12 @@ export default function Home() {
           nextImageLoading: true,
           samples: [{ style: style, pos: pos }],
         }));
-        console.log("training");
         const newModel = await trainModel(appState.model, samples);
         setAppState((state) => ({ ...state, model: newModel }));
-        console.log("predicting");
         const newLocalStats = await modelBulkPredict(newModel, styles);
         setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
-        console.log("done");
+        console.log("Updated local model");
+        pushModel(newModel);
       } else {
         setAppState((state) => ({
           ...state,
@@ -123,7 +101,7 @@ export default function Home() {
       <main style={{ backgroundColor: "#1f1f1f", height: "100vh" }}>
         <Stack>
           <Center style={{ height: "15vh" }}>
-            <Title>Demo of asynchronous federated learning in websites</Title>
+            <Title>Demo of asynchronous federated learning for websites</Title>
           </Center>
           <Center style={{ height: "80vh" }}>
             <Group>
@@ -139,7 +117,6 @@ export default function Home() {
                 sampleCallback={sampleCallback}
                 loading={appState.nextImageLoading}
                 onLoad={() => {
-                  console.log("loaded");
                   setAppState((state) => ({
                     ...state,
                     nextImageLoading: false,
@@ -149,7 +126,7 @@ export default function Home() {
               <Stats
                 name="Federated Prediction"
                 statsData={appState.remoteStatsData}
-                disabled
+                disabled={!appState.connected}
               />
             </Group>
           </Center>

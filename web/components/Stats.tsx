@@ -1,12 +1,5 @@
-import { StatsData } from "@/pages";
-import {
-  Center,
-  Container,
-  LoadingOverlay,
-  Overlay,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { StatsData } from "@/lib/learning";
+import { Center, Container, Overlay, Stack, Text } from "@mantine/core";
 import React from "react";
 import {
   PolarAngleAxis,
