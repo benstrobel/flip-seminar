@@ -9,6 +9,7 @@ import {
   Sample,
   StatsData,
   Style,
+  applyDecodedWeights,
   getModel,
   modelBulkPredict,
   sampleThreshold,
@@ -17,6 +18,7 @@ import {
 import {
   connect,
   pushModel,
+  registerCallback,
   registerDisconnectCallback,
 } from "@/lib/networking";
 import * as tf from "@tensorflow/tfjs";
@@ -30,6 +32,7 @@ export interface ApplicationState {
   localStatsData: StatsData;
   remoteStatsData: StatsData;
   model: tf.Sequential;
+  federatedModel: tf.Sequential;
   connected: boolean;
 }
 
@@ -50,8 +53,31 @@ export default function Home() {
       usageStatData: [0, 0, 0, 0, 0, 0, 0],
     },
     model: getModel(),
+    federatedModel: getModel(),
     connected: false,
   });
+
+  const updateRemoteModel = useCallback(
+    async (msg: string) => {
+      const model = appState.federatedModel;
+      await applyDecodedWeights(msg, model);
+      const newRemoteStats = await modelBulkPredict(
+        appState.federatedModel,
+        styles
+      );
+      console.log("Updated federated model");
+      setAppState((state) => ({
+        ...state,
+        federatedModel: model,
+        remoteStatsData: newRemoteStats,
+      }));
+    },
+    [appState.federatedModel]
+  );
+
+  useEffect(() => {
+    registerCallback(updateRemoteModel);
+  }, [updateRemoteModel]);
 
   useEffect(() => {
     connect(() => {
@@ -60,6 +86,7 @@ export default function Home() {
     registerDisconnectCallback(() => {
       setAppState((state) => ({ ...state, connected: false }));
     });
+    registerCallback(updateRemoteModel);
   }, []);
 
   const sampleCallback = useCallback(

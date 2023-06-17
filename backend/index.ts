@@ -30,7 +30,6 @@ let model = getModel();
 let clientModels: tf.Sequential[] = [];
 
 async function receiveModel(model: tf.Sequential) {
-  tf.io.fromMemorySync;
   console.log("received client model " + (clientModels.length + 1));
   clientModels.push(model);
   if (clientModels.length >= modelThreshold) {
@@ -42,26 +41,23 @@ async function receiveModel(model: tf.Sequential) {
       newWeights[i] = tf.addN([currentWeights[i], ...clientWeightWithIndex]);
     }
     model.setWeights(newWeights);
-    // tf.io.encodeWeights()
     clientModels = [];
+    await pushModel(model);
   }
 }
 
-function pushModel(model: tf.Sequential) {
-  const serializedModel = "test";
+async function pushModel(model: tf.Sequential) {
+  const serializedModel = await encodeWeights(model);
 
   wss.clients.forEach((client) => {
     client.send(serializedModel);
   });
 }
 
-wss.on("connection", function (ws) {
-  ws.on("message", async function (msg) {
-    await receiveModel(JSON.parse(msg.toString()));
-  });
-});
+wss.on("connection", function (ws) {});
 
 app.post("/model", async (req: Request, res: Response) => {
+  console.log("received model ");
   const files = req.files;
   if (!files) return;
   const json = files["model.json"] as fileUpload.UploadedFile;
@@ -88,3 +84,17 @@ server.on("upgrade", (request, socket, head) => {
     wss.emit("connection", socket, request);
   });
 });
+
+export async function encodeWeights(model: tf.Sequential) {
+  const firstStep = await tf.io.encodeWeights(
+    (model.getWeights() as tf.Variable[]).map((x) => ({
+      tensor: x,
+      name: x.name,
+    }))
+  );
+  const secondStep = String.fromCharCode.apply(
+    null,
+    Array.from(new Uint16Array(firstStep.data))
+  );
+  return JSON.stringify({ data: secondStep, specs: firstStep.specs });
+}
