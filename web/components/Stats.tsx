@@ -23,24 +23,28 @@ export default function Stats({
 }: StatsProps) {
   const colorData = [
     {
-      label: "Black",
+      label: "Red",
       value: statsData.colorStatData[0],
     },
     {
-      label: "White",
+      label: "Blue",
       value: statsData.colorStatData[1],
     },
     {
-      label: "Blue",
+      label: "Green",
       value: statsData.colorStatData[2],
     },
     {
-      label: "Brown",
+      label: "Yellow",
       value: statsData.colorStatData[3],
     },
     {
-      label: "Grey",
+      label: "White",
       value: statsData.colorStatData[4],
+    },
+    {
+      label: "Black",
+      value: statsData.colorStatData[5],
     },
   ];
 
@@ -79,18 +83,6 @@ export default function Stats({
     {
       label: "Formal",
       value: statsData.usageStatData[3],
-    },
-    {
-      label: "NA",
-      value: statsData.usageStatData[4],
-    },
-    {
-      label: "Party",
-      value: statsData.usageStatData[5],
-    },
-    {
-      label: "Smart Casual",
-      value: statsData.usageStatData[6],
     },
   ];
 

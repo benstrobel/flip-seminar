@@ -219,6 +219,7 @@ def select_styles():
     for row in stylereader:
         if first:
             first = False
+            stylerows.append(",".join(row) + "\n")
             continue
         if index in indicies:
             row[5] = map_colors(row[5])

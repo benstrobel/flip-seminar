@@ -15,16 +15,9 @@ export interface Categories {
     | "Casual Shoes"
     | "Watches"
     | "Sports Shoes";
-  baseColour: "Black" | "White" | "Blue" | "Brown" | "Grey";
+  baseColour: "Red" | "Blue" | "Green" | "Yellow" | "White" | "Black";
   season: "Summer" | "Fall" | "Winter" | "Spring";
-  usage:
-    | "Casual"
-    | "Sports"
-    | "Ethnic"
-    | "Formal"
-    | "NA"
-    | "Party"
-    | "Smart Casual";
+  usage: "Casual" | "Sports" | "Ethnic" | "Formal";
 }
 
 export type Style = Categories & {
@@ -48,7 +41,7 @@ export const sampleThreshold = 5;
 
 export function getModel() {
   const model = tf.sequential();
-  model.add(tf.layers.dense({ units: 20, inputShape: [36] }));
+  model.add(tf.layers.dense({ units: 20, inputShape: [34] }));
   model.add(tf.layers.dense({ units: 10, inputShape: [20] }));
   model.add(tf.layers.dense({ units: 2, inputShape: [10] }));
   model.compile({
@@ -61,7 +54,7 @@ export function getModel() {
 export async function trainModel(model: tf.Sequential, samples: Sample[]) {
   const xs = tf.tensor2d(
     samples.map((x) => styleToModelInput(x.style)),
-    [samples.length, 36]
+    [samples.length, 34]
   );
   const ys = tf.tensor2d(
     samples.map((x) => [Number(x.pos === true), Number(x.pos === false)]),
@@ -74,7 +67,7 @@ export async function trainModel(model: tf.Sequential, samples: Sample[]) {
 
 export async function modelPredict(model: tf.Sequential, input: Style) {
   const prediction = model.predict(
-    tf.tensor2d(styleToModelInput(input), [1, 36])
+    tf.tensor2d(styleToModelInput(input), [1, 34])
   ) as tf.Tensor<tf.Rank>;
   const data = await prediction.as1D().data();
   return data[0] > data[1];
@@ -87,7 +80,7 @@ export async function modelBulkPredict(
   const predictions = model.predict(
     tf.tensor2d(
       bulkInput.map((x) => styleToModelInput(x)),
-      [bulkInput.length, 36]
+      [bulkInput.length, 34]
     )
   ) as tf.Tensor<tf.Rank>;
   return bulkPredictionToStatsData(bulkInput, predictions);
@@ -97,14 +90,14 @@ async function bulkPredictionToStatsData(
   bulkInput: Style[],
   bulkOutput: tf.Tensor<tf.Rank>
 ): Promise<StatsData> {
-  const colorStatData = [0, 0, 0, 0, 0];
-  const totalColorSampleCount = [0, 0, 0, 0, 0];
+  const colorStatData = [0, 0, 0, 0, 0, 0];
+  const totalColorSampleCount = [0, 0, 0, 0, 0, 0];
 
   const seasonStatData = [0, 0, 0, 0];
   const totalSeasonSampleCount = [0, 0, 0, 0];
 
-  const usageStatData = [0, 0, 0, 0, 0, 0, 0];
-  const totalUsageSampleCount = [0, 0, 0, 0, 0, 0, 0];
+  const usageStatData = [0, 0, 0, 0];
+  const totalUsageSampleCount = [0, 0, 0, 0];
 
   const output = bulkOutput.as2D(bulkInput.length, 2);
   const data = await output.slice(0, bulkInput.length).data();
@@ -114,25 +107,29 @@ async function bulkPredictionToStatsData(
     const negClassProbability = data[i + 1];
     const input = bulkInput[i];
 
-    if (input.baseColour === "Black") {
+    if (input.baseColour === "Red") {
       if (posClassProbability > negClassProbability) colorStatData[0] += 1;
       totalColorSampleCount[0] += 1;
     }
-    if (input.baseColour === "White") {
+    if (input.baseColour === "Blue") {
       if (posClassProbability > negClassProbability) colorStatData[1] += 1;
       totalColorSampleCount[1] += 1;
     }
-    if (input.baseColour === "Blue") {
+    if (input.baseColour === "Green") {
       if (posClassProbability > negClassProbability) colorStatData[2] += 1;
       totalColorSampleCount[2] += 1;
     }
-    if (input.baseColour === "Brown") {
+    if (input.baseColour === "Yellow") {
       if (posClassProbability > negClassProbability) colorStatData[3] += 1;
       totalColorSampleCount[3] += 1;
     }
-    if (input.baseColour === "Grey") {
+    if (input.baseColour === "White") {
       if (posClassProbability > negClassProbability) colorStatData[4] += 1;
       totalColorSampleCount[4] += 1;
+    }
+    if (input.baseColour === "Black") {
+      if (posClassProbability > negClassProbability) colorStatData[5] += 1;
+      totalColorSampleCount[5] += 1;
     }
 
     if (input.season === "Summer") {
@@ -167,18 +164,6 @@ async function bulkPredictionToStatsData(
     if (input.usage === "Formal") {
       if (posClassProbability > negClassProbability) usageStatData[3] += 1;
       totalUsageSampleCount[3] += 1;
-    }
-    if (input.usage === "NA") {
-      if (posClassProbability > negClassProbability) usageStatData[4] += 1;
-      totalUsageSampleCount[4] += 1;
-    }
-    if (input.usage === "Party") {
-      if (posClassProbability > negClassProbability) usageStatData[5] += 1;
-      totalUsageSampleCount[5] += 1;
-    }
-    if (input.usage === "Smart Casual") {
-      if (posClassProbability > negClassProbability) usageStatData[6] += 1;
-      totalUsageSampleCount[6] += 1;
     }
   }
 
@@ -241,7 +226,7 @@ export function stringToArrayBuffer(str: string): ArrayBuffer {
 }
 
 function styleToModelInput(style: Style): number[] {
-  const input = new Array<number>(36);
+  const input = new Array<number>(34);
 
   input[0] = Number(style.gender === "Men");
   input[1] = Number(style.gender === "Women");
@@ -267,24 +252,22 @@ function styleToModelInput(style: Style): number[] {
   input[18] = Number(style.articleType === "Watches");
   input[19] = Number(style.articleType === "Sports Shoes");
 
-  input[20] = Number(style.baseColour === "Black");
-  input[21] = Number(style.baseColour === "White");
-  input[22] = Number(style.baseColour === "Blue");
-  input[23] = Number(style.baseColour === "Brown");
-  input[24] = Number(style.baseColour === "Grey");
+  input[20] = Number(style.baseColour === "Red");
+  input[21] = Number(style.baseColour === "Blue");
+  input[22] = Number(style.baseColour === "Green");
+  input[23] = Number(style.baseColour === "Yellow");
+  input[24] = Number(style.baseColour === "White");
+  input[25] = Number(style.baseColour === "Black");
 
-  input[25] = Number(style.season === "Summer");
-  input[26] = Number(style.season === "Fall");
-  input[27] = Number(style.season === "Winter");
-  input[28] = Number(style.season === "Spring");
+  input[26] = Number(style.season === "Summer");
+  input[27] = Number(style.season === "Fall");
+  input[28] = Number(style.season === "Winter");
+  input[29] = Number(style.season === "Spring");
 
-  input[29] = Number(style.usage === "Casual");
-  input[30] = Number(style.usage === "Sports");
-  input[31] = Number(style.usage === "Ethnic");
-  input[32] = Number(style.usage === "Formal");
-  input[33] = Number(style.usage === "NA");
-  input[34] = Number(style.usage === "Party");
-  input[35] = Number(style.usage === "Smart Casual");
+  input[30] = Number(style.usage === "Casual");
+  input[31] = Number(style.usage === "Sports");
+  input[32] = Number(style.usage === "Ethnic");
+  input[33] = Number(style.usage === "Formal");
 
   return input;
 }
