@@ -99,12 +99,16 @@ export default function Home() {
           nextImageLoading: true,
           samples: [{ style: style, pos: pos }],
         }));
-        const newModel = await trainModel(appState.model, samples);
-        setAppState((state) => ({ ...state, model: newModel }));
-        const newLocalStats = await modelBulkPredict(newModel, styles);
+        const newLocalModel = await trainModel(appState.model, samples);
+        const newFederatedModel = await trainModel(
+          appState.federatedModel,
+          samples
+        );
+        setAppState((state) => ({ ...state, model: newLocalModel }));
+        const newLocalStats = await modelBulkPredict(newLocalModel, styles);
         setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
         console.log("Updated local model");
-        await pushModel(newModel);
+        await pushModel(newFederatedModel);
       } else {
         setAppState((state) => ({
           ...state,

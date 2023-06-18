@@ -11,7 +11,7 @@ dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT;
-const modelThreshold = 1;
+const modelThreshold = 1; // TODO Change after development
 
 const wss = new WebSocket.Server({
   noServer: true,
