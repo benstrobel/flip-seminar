@@ -27,21 +27,28 @@ app.use(
 app.use(cors());
 
 let model = getModel();
-let clientModels: tf.Sequential[] = [];
+let clientModels: { [clientId: string]: tf.Sequential } = {};
 
-async function receiveModel(receivedModel: tf.Sequential) {
-  console.log("received client model " + (clientModels.length + 1));
-  clientModels.push(receivedModel);
-  if (clientModels.length >= modelThreshold) {
+async function receiveModel(receivedModel: tf.Sequential, clientId: number) {
+  console.log(
+    "received client model " + (Object.keys(clientModels).length + 1)
+  );
+  clientModels[clientId] = receivedModel;
+  if (Object.keys(clientModels).length >= modelThreshold) {
     const currentWeights = model.getWeights();
-    const clientWeights = clientModels.map((x) => x.getWeights());
+    const clientWeights = Object.values(clientModels).map((x) =>
+      x.getWeights()
+    );
     const newWeights: tf.Tensor<tf.Rank>[] = [];
     for (let i = 0; i < currentWeights.length; i++) {
       const clientWeightWithIndex = clientWeights.map((x) => x[i]);
-      newWeights[i] = tf.addN([currentWeights[i], ...clientWeightWithIndex]);
+      newWeights[i] = tf.addN([
+        ...Array(clientWeightWithIndex.length).fill(currentWeights[i]),
+        ...clientWeightWithIndex,
+      ]);
     }
     model.setWeights(newWeights);
-    clientModels = [];
+    clientModels = {};
     await pushModel(model);
   }
 }
@@ -55,11 +62,12 @@ async function pushModel(model: tf.Sequential) {
 }
 
 wss.on("connection", function (ws) {
+  const clientId = Math.floor(Math.random() * 10000000000000);
   ws.onmessage = (event) => {
-    console.log("received model ");
+    console.log("received model from " + clientId);
     const receivedModel = getModel();
     applyDecodedWeights(event.data as string, receivedModel);
-    receiveModel(receivedModel);
+    receiveModel(receivedModel, clientId);
   };
 });
 
