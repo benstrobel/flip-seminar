@@ -30,6 +30,7 @@ let model = getModel();
 let clientModels: { [clientId: string]: tf.Sequential } = {};
 
 async function receiveModel(receivedModel: tf.Sequential, clientId: number) {
+  // TODO Find & Fix bug causing model not to change afte a couple of rounds
   console.log(
     "received client model " + (Object.keys(clientModels).length + 1)
   );
@@ -42,6 +43,7 @@ async function receiveModel(receivedModel: tf.Sequential, clientId: number) {
     const newWeights: tf.Tensor<tf.Rank>[] = [];
     for (let i = 0; i < currentWeights.length; i++) {
       const clientWeightWithIndex = clientWeights.map((x) => x[i]);
+      // TODO Implement weighing updates according to staleness & amount of local samples the update was based on
       newWeights[i] = tf.addN([
         ...Array(clientWeightWithIndex.length).fill(currentWeights[i]),
         ...clientWeightWithIndex,

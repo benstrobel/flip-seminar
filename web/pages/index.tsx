@@ -92,7 +92,7 @@ export default function Home() {
   const sampleCallback = useCallback(
     async (style: Style, pos: boolean) => {
       if (appState.samples.length >= sampleThreshold) {
-        const samples = appState.samples;
+        const samples = appState.samples; // TODO Split into training and validation set
         setAppState((state) => ({
           ...state,
           currentIndex: Math.round(Math.random() * maxItemIndex),
