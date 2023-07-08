@@ -37,7 +37,6 @@ export default function Swiper({
   transitionState,
   onLoad,
 }: SwiperProps) {
-  console.log("swiper: " + style.id + " " + style.productDisplayName)
   return (
     <Stack>
       <Center>

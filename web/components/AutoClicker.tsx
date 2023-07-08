@@ -25,10 +25,8 @@ function Autoclicker({style, sampleCallback, loading}: AutoClickerProps) {
             setTimeout(() => {
                 if(selectedColors.includes(style.baseColour) && selectedUsages.includes(style.usage) && selectedSeasons.includes(style.season)) {
                     sampleCallback(style, true);
-                    console.log("clicker: " + style.id + " " + true)
                 } else {
                     sampleCallback(style, false);
-                    console.log("clicker: " + style.id + " " + false)
                 }
             }, 1000);
         }

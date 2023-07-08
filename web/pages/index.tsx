@@ -46,7 +46,11 @@ export interface ApplicationState {
 }
 
 function getNewIndex(): number {
-  return dataDict[Object.keys(dataDict)[Math.round(Math.random() * maxDictIndex)]].style.id;
+  try {
+    return dataDict[Object.keys(dataDict)[Math.round(Math.random() * maxDictIndex)]].style.id;
+  } catch(ex) {
+    return getNewIndex();
+  }
 }
 
 export default function Home() {
