@@ -8,6 +8,8 @@ import {
   ActionIcon,
   Center,
   LoadingOverlay,
+  Transition,
+  MantineTransition,
 } from "@mantine/core";
 import { Heart, X } from "tabler-icons-react";
 
@@ -17,6 +19,8 @@ interface SwiperProps {
   sampleCallback: (style: Style, pos: boolean) => void;
   loading?: boolean;
   onLoad?: () => void;
+  transitionMounted: boolean;
+  transition: MantineTransition;
 }
 
 export default function Swiper({
@@ -24,6 +28,8 @@ export default function Swiper({
   style,
   sampleCallback,
   loading = false,
+  transitionMounted,
+  transition,
   onLoad,
 }: SwiperProps) {
   return (
@@ -31,44 +37,46 @@ export default function Swiper({
       <Center>
         <Text size={"lg"}>Would you wear/use this fashion product?</Text>
       </Center>
-      <Card shadow="sm" radius={"md"} withBorder>
-        <Card.Section style={{ position: "relative" }}>
-          <Image
-            src={imageUrl}
-            height={"40vh"}
-            onLoad={onLoad}
-            alt={style.productDisplayName}
-            style={{ minHeight: "40vh", minWidth: "30vh" }}
-          />
-          <LoadingOverlay visible={loading} color="green" />
-        </Card.Section>
-        <Group position="center" style={{}}>
-          <Group style={{ width: "40%", marginTop: "15px" }} position="apart">
-            <ActionIcon
-              style={{ backgroundColor: "#101113" }}
-              radius={"xl"}
-              size={"xl"}
-              onClick={() => {
-                sampleCallback(style, false);
-              }}
-              disabled={loading}
-            >
-              <X color="red" />
-            </ActionIcon>
-            <ActionIcon
-              style={{ backgroundColor: "#101113" }}
-              radius={"xl"}
-              size={"xl"}
-              onClick={() => {
-                sampleCallback(style, true);
-              }}
-              disabled={loading}
-            >
-              <Heart color="green" />
-            </ActionIcon>
+      <Transition mounted={transitionMounted} transition={transition} keepMounted>
+        {(styles) => <Card shadow="sm" radius={"md"} withBorder style={styles}>
+          <Card.Section style={{ position: "relative" }}>
+            <Image
+              src={imageUrl}
+              height={"40vh"}
+              onLoad={onLoad}
+              alt={style.productDisplayName}
+              style={{ minHeight: "40vh", minWidth: "30vh" }}
+            />
+            <LoadingOverlay visible={loading} color="green" />
+          </Card.Section>
+          <Group position="center" style={{}}>
+            <Group style={{ width: "40%", marginTop: "15px" }} position="apart">
+              <ActionIcon
+                style={{ backgroundColor: "#101113" }}
+                radius={"xl"}
+                size={"xl"}
+                onClick={() => {
+                  sampleCallback(style, false);
+                }}
+                disabled={loading}
+              >
+                <X color="red" />
+              </ActionIcon>
+              <ActionIcon
+                style={{ backgroundColor: "#101113" }}
+                radius={"xl"}
+                size={"xl"}
+                onClick={() => {
+                  sampleCallback(style, true);
+                }}
+                disabled={loading}
+              >
+                <Heart color="green" />
+              </ActionIcon>
+            </Group>
           </Group>
-        </Group>
-      </Card>
+        </Card>}
+      </Transition>
     </Stack>
   );
 }

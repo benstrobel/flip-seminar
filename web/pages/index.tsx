@@ -1,4 +1,4 @@
-import { Center, Group, Stack, Title } from "@mantine/core";
+import { Center, Group, MultiSelect, Stack, Title, Text, Space, MantineTransition } from "@mantine/core";
 import Head from "next/head";
 import { useCallback, useEffect, useState } from "react";
 import images from "@/data/images.json";
@@ -22,6 +22,7 @@ import {
   registerDisconnectCallback,
 } from "@/lib/networking";
 import * as tf from "@tensorflow/tfjs";
+import Autoclicker from "@/components/AutoClicker";
 
 const maxItemIndex = images.length;
 
@@ -89,8 +90,13 @@ export default function Home() {
     registerCallback(updateRemoteModel);
   }, []);
 
+  const [transition, setTransition] = useState<MantineTransition>("slide-right");
+  const [transitionMounted, setTransitionMounted] = useState(true);
+
   const sampleCallback = useCallback(
     async (style: Style, pos: boolean) => {
+      setTransition(pos ? "slide-left" : "slide-right");
+      setTransitionMounted(false);
       if (appState.samples.length >= sampleThreshold) {
         const samples = appState.samples; // TODO Split into training and validation set
         setAppState((state) => ({
@@ -122,14 +128,14 @@ export default function Home() {
   );
 
   return (
-    <div>
+    <div style={{height: "100%"}}>
       <Head>
         <title>FLIP Seminar - Ben Strobel</title>
         <meta name="description" content="FLIP Seminar - Ben Strobel" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main style={{ backgroundColor: "#1f1f1f", height: "100vh" }}>
+      <main style={{ backgroundColor: "#1f1f1f", minHeight: "100vh" }}>
         <Stack>
           <Center style={{ height: "15vh" }}>
             <Title>Demo of asynchronous federated learning for websites</Title>
@@ -140,20 +146,28 @@ export default function Home() {
                 statsData={appState.localStatsData}
                 name="Local Prediction"
               />
-              <Swiper
-                imageUrl={
-                  "/images/" + images[appState.currentIndex].id + ".jpg"
-                }
-                style={styles[appState.currentIndex]}
-                sampleCallback={sampleCallback}
-                loading={appState.nextImageLoading}
-                onLoad={() => {
-                  setAppState((state) => ({
-                    ...state,
-                    nextImageLoading: false,
-                  }));
-                }}
-              />
+              <Stack style={{width: "40vw"}}>
+                <Swiper
+                  imageUrl={
+                    "/images/" + images[appState.currentIndex].id + ".jpg"
+                  }
+                  style={styles[appState.currentIndex]}
+                  sampleCallback={sampleCallback}
+                  loading={appState.nextImageLoading}
+                  onLoad={() => {
+                    setAppState((state) => ({
+                      ...state,
+                      nextImageLoading: false,
+                    }));
+                    setTransition("fade");
+                    setTransitionMounted(true);
+                  }}
+                  transition={transition}
+                  transitionMounted={transitionMounted}
+                />
+                <Space h={"md"}/>
+                <Autoclicker/>
+              </Stack>
               <Stats
                 name="Federated Prediction"
                 statsData={appState.remoteStatsData}
