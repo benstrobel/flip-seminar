@@ -20,8 +20,13 @@ interface SwiperProps {
   sampleCallback: (style: Style, pos: boolean) => void;
   loading?: boolean;
   onLoad?: () => void;
-  transitionMounted: boolean;
+  transitionState: TransitionState;
+}
+
+
+export interface TransitionState {
   transition: MantineTransition;
+  mounted: boolean;
 }
 
 export default function Swiper({
@@ -29,17 +34,17 @@ export default function Swiper({
   style,
   sampleCallback,
   loading = false,
-  transitionMounted,
-  transition,
+  transitionState,
   onLoad,
 }: SwiperProps) {
+  console.log("swiper: " + style.id + " " + style.productDisplayName)
   return (
     <Stack>
       <Center>
         <Text size={"lg"}>Would you wear/use this fashion product?</Text>
       </Center>
       <Container style={{minHeight: "43vh"}}>
-        <Transition mounted={transitionMounted} transition={transition} keepMounted>
+        <Transition mounted={transitionState.mounted} transition={transitionState.transition} keepMounted>
           {(styles) => <Card shadow="sm" radius={"md"} withBorder style={styles}>
             <Card.Section style={{ position: "relative" }}>
               <Image

@@ -1,9 +1,9 @@
 import { Center, Group, MultiSelect, Stack, Title, Text, Space, MantineTransition } from "@mantine/core";
 import Head from "next/head";
 import { useCallback, useEffect, useState } from "react";
-import images from "@/data/images.json";
-import importedStyles from "@/data/styles.json";
-import Swiper from "@/components/Swiper";
+import imagesRaw from "@/data/images.json";
+import stylesRaw from "@/data/styles.json";
+import Swiper, { TransitionState } from "@/components/Swiper";
 import Stats from "@/components/Stats";
 import {
   Sample,
@@ -24,7 +24,15 @@ import {
 import * as tf from "@tensorflow/tfjs";
 import Autoclicker from "@/components/AutoClicker";
 
-const maxItemIndex = images.length;
+const dataDict: {[id: string]: {style: Style, img?: {id: number, link: string}}} = {}
+stylesRaw.forEach((x) => {
+  dataDict[x.id] = {style: x as any}
+})
+imagesRaw.forEach((x) => {
+  dataDict[x.id] = {style: dataDict[x.id].style, img: x}
+})
+
+const maxDictIndex = stylesRaw.length;
 
 export interface ApplicationState {
   currentIndex: number;
@@ -37,10 +45,13 @@ export interface ApplicationState {
   connected: boolean;
 }
 
+function getNewIndex(): number {
+  return dataDict[Object.keys(dataDict)[Math.round(Math.random() * maxDictIndex)]].style.id;
+}
+
 export default function Home() {
-  const styles = importedStyles as Style[];
   const [appState, setAppState] = useState<ApplicationState>({
-    currentIndex: Math.round(Math.random() * maxItemIndex),
+    currentIndex: getNewIndex(),
     samples: [],
     nextImageLoading: false,
     localStatsData: {
@@ -64,7 +75,7 @@ export default function Home() {
       await applyDecodedWeights(msg, model);
       const newRemoteStats = await modelBulkPredict(
         appState.federatedModel,
-        styles
+        stylesRaw as Style[]
       );
       console.log("Updated federated model");
       setAppState((state) => ({
@@ -90,18 +101,16 @@ export default function Home() {
     registerCallback(updateRemoteModel);
   }, []);
 
-  const [transition, setTransition] = useState<MantineTransition>("slide-right");
-  const [transitionMounted, setTransitionMounted] = useState(true);
+  const [transitionState, setTransitionState] = useState<TransitionState>({transition: "fade", mounted: true});
 
   const sampleCallback = useCallback(
     async (style: Style, pos: boolean) => {
-      setTransition(pos ? "slide-left" : "slide-right");
-      setTransitionMounted(false);
+      setTransitionState({mounted: false, transition: pos ? "slide-left" : "slide-right"})
       if (appState.samples.length >= sampleThreshold) {
         const samples = appState.samples; // TODO Split into training and validation set
         setAppState((state) => ({
           ...state,
-          currentIndex: Math.round(Math.random() * maxItemIndex),
+          currentIndex: getNewIndex(),
           nextImageLoading: true,
           samples: [{ style: style, pos: pos }],
         }));
@@ -111,20 +120,20 @@ export default function Home() {
           samples
         );
         setAppState((state) => ({ ...state, model: newLocalModel }));
-        const newLocalStats = await modelBulkPredict(newLocalModel, styles);
+        const newLocalStats = await modelBulkPredict(newLocalModel, stylesRaw as Style[]);
         setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
         console.log("Updated local model");
         await pushModel(newFederatedModel);
       } else {
         setAppState((state) => ({
           ...state,
-          currentIndex: Math.round(Math.random() * maxItemIndex),
+          currentIndex: getNewIndex(),
           nextImageLoading: true,
           samples: [...state.samples, { style: style, pos: pos }],
         }));
       }
     },
-    [appState.model, appState.samples, styles]
+    [appState.model, appState.samples, stylesRaw]
   );
 
   return (
@@ -149,9 +158,9 @@ export default function Home() {
               <Stack style={{width: "40vw"}}>
                 <Swiper
                   imageUrl={
-                    "/images/" + images[appState.currentIndex].id + ".jpg"
+                    "/images/" + dataDict[appState.currentIndex].style.id + ".jpg"
                   }
-                  style={styles[appState.currentIndex]}
+                  style={dataDict[appState.currentIndex].style}
                   sampleCallback={sampleCallback}
                   loading={appState.nextImageLoading}
                   onLoad={() => {
@@ -159,14 +168,12 @@ export default function Home() {
                       ...state,
                       nextImageLoading: false,
                     }));
-                    setTransition("fade");
-                    setTransitionMounted(true);
+                    setTransitionState({transition: "fade", mounted: true})
                   }}
-                  transition={transition}
-                  transitionMounted={transitionMounted}
+                  transitionState={transitionState}
                 />
                 <Space h={"md"}/>
-                <Autoclicker/>
+                <Autoclicker style={dataDict[appState.currentIndex].style} sampleCallback={sampleCallback} loading={!appState.nextImageLoading}/>
               </Stack>
               <Stats
                 name="Federated Prediction"

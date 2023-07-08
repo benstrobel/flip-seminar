@@ -22,8 +22,10 @@ export interface Categories {
 
 export type Style = Categories & {
   id: number;
-  year: number;
   productDisplayName: string;
+  baseColour: string;
+  season: string;
+  usage: string;
 };
 
 export interface Sample {

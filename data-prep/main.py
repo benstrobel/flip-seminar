@@ -209,7 +209,13 @@ def select_styles():
     stylerows = []
 
     index = 0
+    imagesfile.seek(0)
+    first = True
     for row in imagereader:
+        if first:
+            first = False
+            imagerows.append(",".join(row) + "\n")
+            continue
         if index in indicies:
             imagerows.append(",".join(row) + "\n")
         index += 1
