@@ -11,7 +11,7 @@ dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT;
-const modelThreshold = 1; // TODO Change after development
+const modelThreshold = 2; // TODO Change after development
 
 const wss = new WebSocket.Server({
   noServer: true,
@@ -46,9 +46,9 @@ async function receiveModel(receivedModel: tf.Sequential, clientId: number, clie
       const clientWeightWithIndex = clientWeights.map((x) => x[i]);
       // TODO Implement weighing updates according to staleness & amount of local samples the update was based on
       newWeights[i] = tf.div(tf.addN([
-        ...Array(clientWeightWithIndex.length).fill(currentWeights[i]),
+        //...Array(clientWeightWithIndex.length).fill(currentWeights[i]),
         ...clientWeightWithIndex,
-      ]), clientWeightWithIndex.length + 1);
+      ]), clientWeightWithIndex.length /*+ 1*/);
     }
     model.setWeights(newWeights);
     modelVersion += 1;
