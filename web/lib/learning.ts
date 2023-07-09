@@ -43,12 +43,13 @@ export const sampleThreshold = 5;
 
 export function getModel() {
   const model = tf.sequential();
-  model.add(tf.layers.dense({ units: 20, inputShape: [34] }));
-  model.add(tf.layers.dense({ units: 10, inputShape: [20] }));
-  model.add(tf.layers.dense({ units: 2, inputShape: [10] }));
+  model.add(tf.layers.dense({ units: 20, inputShape: [34], activation: "selu" }));
+  model.add(tf.layers.dense({ units: 10, inputShape: [20], activation: "selu" }));
+  model.add(tf.layers.dense({ units: 1, inputShape: [10], activation: "selu" }));
   model.compile({
-    loss: tf.losses.sigmoidCrossEntropy,
-    optimizer: new tf.SGDOptimizer(0.01)
+    loss: tf.metrics.binaryCrossentropy,
+    optimizer: new tf.AdamOptimizer(0.001, 0.9, 0.999, 0.00000001),
+    metrics: ["accuracy"]
   });
   return model;
 }
@@ -59,8 +60,8 @@ export async function trainModel(model: tf.Sequential, samples: Sample[]) {
     [samples.length, 34]
   );
   const ys = tf.tensor2d(
-    samples.map((x) => [Number(x.pos === true), Number(x.pos === false)]),
-    [samples.length, 2]
+    samples.map((x) => [Number(x.pos === true)]),
+    [samples.length, 1]
   );
   return await model.fit(xs, ys, { batchSize: 5 }).then(() => {
     return model;
@@ -72,7 +73,7 @@ export async function modelPredict(model: tf.Sequential, input: Style) {
     tf.tensor2d(styleToModelInput(input), [1, 34])
   ) as tf.Tensor<tf.Rank>;
   const data = await prediction.as1D().data();
-  return data[0] > data[1];
+  return data[0] >= 0.5;
 }
 
 export async function modelBulkPredict(
@@ -93,8 +94,8 @@ export async function modelMetrics(
   samples: Sample[]
 ) {
   const groundTruth = tf.tensor2d(
-    samples.map((x) => [Number(x.pos === true), Number(x.pos === false)]),
-    [samples.length, 2]
+    samples.map((x) => [Number(x.pos === true)]),
+    [samples.length, 1]
   )
 
   const predictions = model.predict(
@@ -104,7 +105,7 @@ export async function modelMetrics(
     )
   ) as tf.Tensor<tf.Rank>;
 
-  const errors = tf.metrics.meanSquaredError(groundTruth, predictions);
+  const errors = tf.metrics.binaryCrossentropy(groundTruth, predictions);
   return errors.mean().dataSync()[0];
 }
 
@@ -121,70 +122,69 @@ async function bulkPredictionToStatsData(
   const usageStatData = [0, 0, 0, 0];
   const totalUsageSampleCount = [0, 0, 0, 0];
 
-  const output = bulkOutput.as2D(bulkInput.length, 2);
+  const output = bulkOutput.as2D(bulkInput.length, 1);
   const data = await output.slice(0, bulkInput.length).data();
 
   for (let i = 0; i < bulkInput.length; i = i + 2) {
     const posClassProbability = data[i + 0];
-    const negClassProbability = data[i + 1];
     const input = bulkInput[i];
 
     if (input.baseColour === "Red") {
-      if (posClassProbability > negClassProbability) colorStatData[0] += 1;
+      if (posClassProbability >= 0.5) colorStatData[0] += 1;
       totalColorSampleCount[0] += 1;
     }
     if (input.baseColour === "Blue") {
-      if (posClassProbability > negClassProbability) colorStatData[1] += 1;
+      if (posClassProbability >= 0.5) colorStatData[1] += 1;
       totalColorSampleCount[1] += 1;
     }
     if (input.baseColour === "Green") {
-      if (posClassProbability > negClassProbability) colorStatData[2] += 1;
+      if (posClassProbability >= 0.5) colorStatData[2] += 1;
       totalColorSampleCount[2] += 1;
     }
     if (input.baseColour === "Yellow") {
-      if (posClassProbability > negClassProbability) colorStatData[3] += 1;
+      if (posClassProbability >= 0.5) colorStatData[3] += 1;
       totalColorSampleCount[3] += 1;
     }
     if (input.baseColour === "White") {
-      if (posClassProbability > negClassProbability) colorStatData[4] += 1;
+      if (posClassProbability >= 0.5) colorStatData[4] += 1;
       totalColorSampleCount[4] += 1;
     }
     if (input.baseColour === "Black") {
-      if (posClassProbability > negClassProbability) colorStatData[5] += 1;
+      if (posClassProbability >= 0.5) colorStatData[5] += 1;
       totalColorSampleCount[5] += 1;
     }
 
     if (input.season === "Summer") {
-      if (posClassProbability > negClassProbability) seasonStatData[0] += 1;
+      if (posClassProbability >= 0.5) seasonStatData[0] += 1;
       totalSeasonSampleCount[0] += 1;
     }
     if (input.season === "Fall") {
-      if (posClassProbability > negClassProbability) seasonStatData[1] += 1;
+      if (posClassProbability >= 0.5) seasonStatData[1] += 1;
       totalSeasonSampleCount[1] += 1;
     }
     if (input.season === "Winter") {
-      if (posClassProbability > negClassProbability) seasonStatData[2] += 1;
+      if (posClassProbability >= 0.5) seasonStatData[2] += 1;
       totalSeasonSampleCount[2] += 1;
     }
     if (input.season === "Spring") {
-      if (posClassProbability > negClassProbability) seasonStatData[3] += 1;
+      if (posClassProbability >= 0.5) seasonStatData[3] += 1;
       totalSeasonSampleCount[3] += 1;
     }
 
     if (input.usage === "Casual") {
-      if (posClassProbability > negClassProbability) usageStatData[0] += 1;
+      if (posClassProbability >= 0.5) usageStatData[0] += 1;
       totalUsageSampleCount[0] += 1;
     }
     if (input.usage === "Sports") {
-      if (posClassProbability > negClassProbability) usageStatData[1] += 1;
+      if (posClassProbability >= 0.5) usageStatData[1] += 1;
       totalUsageSampleCount[1] += 1;
     }
     if (input.usage === "Ethnic") {
-      if (posClassProbability > negClassProbability) usageStatData[2] += 1;
+      if (posClassProbability >= 0.5) usageStatData[2] += 1;
       totalUsageSampleCount[2] += 1;
     }
     if (input.usage === "Formal") {
-      if (posClassProbability > negClassProbability) usageStatData[3] += 1;
+      if (posClassProbability >= 0.5) usageStatData[3] += 1;
       totalUsageSampleCount[3] += 1;
     }
   }

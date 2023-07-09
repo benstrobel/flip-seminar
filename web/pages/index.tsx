@@ -131,7 +131,7 @@ export default function Home() {
         const newLocalStats = await modelBulkPredict(newLocalModel, stylesRaw as Style[]);
         setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
         const error = await modelMetrics(newLocalModel, samples);
-        console.log("Error: " + error)
+        console.log("Error: " + error + " Samples: " + samples.length)
         console.log("Updated local model");
         await pushModel(newFederatedModel);
       } else {
