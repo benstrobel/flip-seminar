@@ -211,7 +211,7 @@ async function bulkPredictionToStatsData(
 export async function encodeWeights(model: tf.Sequential, modelVersion: number, samplesUsed: number) {
   const firstStep = await tf.io.encodeWeights(
     (model.getWeights() as tf.Variable[]).map((x) => ({
-      tensor: x,
+      tensor: tf.add(x, tf.randomNormal(x.shape, 0.001, 0.01)),
       name: x.name,
     }))
   );
