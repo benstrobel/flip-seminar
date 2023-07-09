@@ -44,6 +44,8 @@ export interface ApplicationState {
   remoteStatsData: StatsData;
   model: tf.Sequential;
   federatedModel: tf.Sequential;
+  federatedModelVersion: number;
+  serverLatestClientCount: number;
   connected: boolean;
 }
 
@@ -73,22 +75,27 @@ export default function Home() {
     },
     model: getModel(),
     federatedModel: getModel(),
+    federatedModelVersion: 0,
+    serverLatestClientCount: 0,
     connected: false,
   });
 
   const updateRemoteModel = useCallback(
     async (msg: string) => {
       const model = appState.federatedModel;
-      await applyDecodedWeights(msg, model);
+      const decoded = await applyDecodedWeights(msg, model);
+      const modelVersion: number = decoded.modelVersion;
+      const serverLatestClientCount: number = decoded.latestClientCount;
       const newRemoteStats = await modelBulkPredict(
         appState.federatedModel,
         stylesRaw as Style[]
       );
-      console.log("Updated federated model");
       setAppState((state) => ({
         ...state,
         federatedModel: model,
         remoteStatsData: newRemoteStats,
+        federatedModelVersion: modelVersion,
+        serverLatestClientCount: serverLatestClientCount
       }));
     },
     [appState.federatedModel]
@@ -113,6 +120,9 @@ export default function Home() {
   const sampleCallback = useCallback(
     async (style: Style, pos: boolean) => {
       setTransitionState({mounted: false, transition: pos ? "slide-left" : "slide-right"})
+      setTimeout(() => {
+        setTransitionState({transition: "fade", mounted: true});
+      }, 750);
       if (appState.samplesSinceLastUpdate >= sampleThreshold) {
         const samples = appState.samples; // TODO Split into training and validation set
         setAppState((state) => ({
@@ -132,8 +142,7 @@ export default function Home() {
         setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
         const error = await modelMetrics(newLocalModel, samples);
         console.log("Error: " + error + " Samples: " + samples.length)
-        console.log("Updated local model");
-        await pushModel(newFederatedModel);
+        await pushModel(newFederatedModel, appState.federatedModelVersion, samples.length);
       } else {
         setAppState((state) => ({
           ...state,
@@ -162,10 +171,13 @@ export default function Home() {
           </Center>
           <Center style={{ height: "80vh" }}>
             <Group>
-              <Stats
-                statsData={appState.localStatsData}
-                name="Local Prediction"
-              />
+              <Stack>
+                <Stats
+                  statsData={appState.localStatsData}
+                  name="Local Prediction"
+                />
+                {<Center><Text>{"Samples created: " + appState.samples.length}</Text></Center>}
+              </Stack>
               <Stack style={{width: "40vw"}}>
                 <Swiper
                   imageUrl={
@@ -179,18 +191,20 @@ export default function Home() {
                       ...state,
                       nextImageLoading: false,
                     }));
-                    setTransitionState({transition: "fade", mounted: true})
                   }}
                   transitionState={transitionState}
                 />
                 <Space h={"md"}/>
                 <Autoclicker style={dataDict[appState.currentIndex].style} sampleCallback={sampleCallback} loading={!appState.nextImageLoading}/>
               </Stack>
-              <Stats
-                name="Federated Prediction"
-                statsData={appState.remoteStatsData}
-                disabled={!appState.connected}
-              />
+              <Stack>
+                <Stats
+                  name="Federated Prediction"
+                  statsData={appState.remoteStatsData}
+                  disabled={!appState.connected}
+                />
+                {<Center><Text>{appState.connected && appState.serverLatestClientCount > 0 && ("Clients connected: " + appState.serverLatestClientCount)}</Text></Center>}
+              </Stack>
             </Group>
           </Center>
         </Stack>

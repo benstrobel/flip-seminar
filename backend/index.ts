@@ -27,37 +27,38 @@ app.use(
 app.use(cors());
 
 let model = getModel();
-let clientModels: { [clientId: string]: tf.Sequential } = {};
+let modelVersion = 1;
+let clientModels: { [clientId: string]: {model: tf.Sequential, version: number, samplesUsed: number} } = {};
 
-async function receiveModel(receivedModel: tf.Sequential, clientId: number) {
+async function receiveModel(receivedModel: tf.Sequential, clientId: number, clientModelVersion: number, samplesUsed: number) {
   // TODO Find & Fix bug causing model not to change afte a couple of rounds
   console.log(
-    "received client model " + (Object.keys(clientModels).length + 1)
+    "received client model " + (Object.keys(clientModels).length + 1 + " from version: " + clientModelVersion + " with sample count: " + samplesUsed)
   );
-  clientModels[clientId] = receivedModel;
+  clientModels[clientId] = {model: receivedModel, version: clientModelVersion, samplesUsed: samplesUsed};
   if (Object.keys(clientModels).length >= modelThreshold) {
     const currentWeights = model.getWeights();
     const clientWeights = Object.values(clientModels).map((x) =>
-      x.getWeights()
+      x.model.getWeights()
     );
     const newWeights: tf.Tensor<tf.Rank>[] = [];
     for (let i = 0; i < currentWeights.length; i++) {
       const clientWeightWithIndex = clientWeights.map((x) => x[i]);
       // TODO Implement weighing updates according to staleness & amount of local samples the update was based on
-      newWeights[i] = tf.addN([
+      newWeights[i] = tf.div(tf.addN([
         ...Array(clientWeightWithIndex.length).fill(currentWeights[i]),
         ...clientWeightWithIndex,
-      ]);
+      ]), clientWeightWithIndex.length + 1);
     }
     model.setWeights(newWeights);
+    modelVersion += 1;
     clientModels = {};
     await pushModel(model);
   }
 }
 
 async function pushModel(model: tf.Sequential) {
-  const serializedModel = await encodeWeights(model);
-
+  const serializedModel = await encodeWeights(model, modelVersion, wss.clients.size);
   wss.clients.forEach((client) => {
     client.send(serializedModel);
   });
@@ -68,8 +69,10 @@ wss.on("connection", function (ws) {
   ws.onmessage = (event) => {
     console.log("received model from " + clientId);
     const receivedModel = getModel();
-    applyDecodedWeights(event.data as string, receivedModel);
-    receiveModel(receivedModel, clientId);
+    const decoded = applyDecodedWeights(event.data as string, receivedModel);
+    const modelVersion: number = decoded.modelVersion;
+    const samplesUsed: number = decoded.samplesUsed;
+    receiveModel(receivedModel, clientId, modelVersion, samplesUsed);
   };
 });
 
@@ -83,7 +86,7 @@ server.on("upgrade", (request, socket, head) => {
   });
 });
 
-export async function encodeWeights(model: tf.Sequential) {
+export async function encodeWeights(model: tf.Sequential, modelVersion: number, clientsConnected: number) {
   const firstStep = await tf.io.encodeWeights(
     (model.getWeights() as tf.Variable[]).map((x) => ({
       tensor: x,
@@ -94,5 +97,5 @@ export async function encodeWeights(model: tf.Sequential) {
     null,
     Array.from(new Uint16Array(firstStep.data))
   );
-  return JSON.stringify({ data: secondStep, specs: firstStep.specs });
+  return JSON.stringify({ data: secondStep, specs: firstStep.specs, modelVersion: modelVersion, latestClientCount: clientsConnected });
 }

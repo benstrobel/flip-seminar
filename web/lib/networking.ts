@@ -6,14 +6,17 @@ const websocketUrl = "ws://" + baseUrl;
 let ws: WebSocket | null = null;
 
 export function connect(connectedCallback: () => void) {
+  if(ws !== null) {
+    ws.close();
+  }
   ws = new WebSocket(websocketUrl);
   ws.onopen = connectedCallback;
 }
 
-export async function pushModel(model: tf.Sequential) {
+export async function pushModel(model: tf.Sequential, modelVersion: number, samplesUsed: number) {
   // TODO Implement differential privacy perturbation
   if (ws && ws.OPEN) {
-    ws.send(await encodeWeights(model));
+    ws.send(await encodeWeights(model, modelVersion, samplesUsed));
   }
 }
 

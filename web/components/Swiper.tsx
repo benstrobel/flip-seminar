@@ -42,7 +42,7 @@ export default function Swiper({
       <Center>
         <Text size={"lg"}>Would you wear/use this fashion product?</Text>
       </Center>
-      <Container style={{minHeight: "43vh"}}>
+      <Container style={{minHeight: "50vh"}}>
         <Transition mounted={transitionState.mounted} transition={transitionState.transition} keepMounted>
           {(styles) => <Card shadow="sm" radius={"md"} withBorder style={styles}>
             <Card.Section style={{ position: "relative" }}>

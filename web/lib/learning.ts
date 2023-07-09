@@ -208,7 +208,7 @@ async function bulkPredictionToStatsData(
   };
 }
 
-export async function encodeWeights(model: tf.Sequential) {
+export async function encodeWeights(model: tf.Sequential, modelVersion: number, samplesUsed: number) {
   const firstStep = await tf.io.encodeWeights(
     (model.getWeights() as tf.Variable[]).map((x) => ({
       tensor: x,
@@ -219,7 +219,7 @@ export async function encodeWeights(model: tf.Sequential) {
     null,
     Array.from(new Uint16Array(firstStep.data))
   );
-  return JSON.stringify({ data: secondStep, specs: firstStep.specs });
+  return JSON.stringify({ data: secondStep, specs: firstStep.specs, modelVersion: modelVersion, samplesUsed: samplesUsed });
 }
 
 export function applyDecodedWeights(
@@ -235,6 +235,7 @@ export function applyDecodedWeights(
     (x) => new tf.Variable(x[1], true, x[0], x[1].id)
   );
   model.setWeights(weights);
+  return firstStep;
 }
 
 export function stringToArrayBuffer(str: string): ArrayBuffer {
