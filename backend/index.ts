@@ -1,17 +1,16 @@
-import express, { Express, Request, Response } from "express";
+import express, { Express } from "express";
 import dotenv from "dotenv";
 import { WebSocket } from "ws";
 import { applyDecodedWeights, getModel } from "../web/lib/learning";
 import * as tf from "@tensorflow/tfjs-node";
 import fileUpload from "express-fileupload";
-import fs from "fs";
 import cors from "cors";
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT;
-const modelThreshold = 1; // TODO Change after development
+const clientThreshold = 1; // Set to 1 for demo purposes, increase for production
 
 const wss = new WebSocket.Server({
   noServer: true,
@@ -27,28 +26,30 @@ app.use(
 app.use(cors());
 
 let model = getModel();
+let modelSamplesIncluded = 5;
 let modelVersion = 1;
 let clientModels: { [clientId: string]: {model: tf.Sequential, version: number, samplesUsed: number} } = {};
 
+function stalenessFactor(serverModelVersion: number, clientModelVersion: number) {
+  return clientModelVersion === 0 ? 1 : 1/(serverModelVersion-clientModelVersion);
+}
+
 async function receiveModel(receivedModel: tf.Sequential, clientId: number, clientModelVersion: number, samplesUsed: number) {
-  // TODO Find & Fix bug causing model not to change afte a couple of rounds
   console.log(
     "received client model " + (Object.keys(clientModels).length + 1 + " from version: " + clientModelVersion + " with sample count: " + samplesUsed)
   );
   clientModels[clientId] = {model: receivedModel, version: clientModelVersion, samplesUsed: samplesUsed};
-  if (Object.keys(clientModels).length >= modelThreshold) {
+  // Federated averaging, weighed by samplecount update is based on & staleness of update
+  if (Object.keys(clientModels).length >= clientThreshold) {
     const currentWeights = model.getWeights();
-    const clientWeights = Object.values(clientModels).map((x) =>
-      x.model.getWeights()
-    );
     const newWeights: tf.Tensor<tf.Rank>[] = [];
+    const sampleSum = modelSamplesIncluded + Object.values(clientModels).reduce((prev, curr) => prev + curr.samplesUsed, 0)
     for (let i = 0; i < currentWeights.length; i++) {
-      const clientWeightWithIndex = clientWeights.map((x) => x[i]);
-      // TODO Implement weighing updates according to staleness & amount of local samples the update was based on
-      newWeights[i] = tf.div(tf.addN([
-        ...Array(clientWeightWithIndex.length).fill(currentWeights[i]),
+      const clientWeightWithIndex = Object.values(clientModels).map((x) => tf.mul(x.model.getWeights()[i], x.samplesUsed * stalenessFactor(modelVersion, clientModelVersion)));
+      newWeights[i] = tf.div(tf.div(tf.addN([
+        ...Array(clientWeightWithIndex.length).fill(tf.mul(currentWeights[i], modelSamplesIncluded)),
         ...clientWeightWithIndex,
-      ]), clientWeightWithIndex.length + 1);
+      ]), clientWeightWithIndex.length + 1), sampleSum);
     }
     model.setWeights(newWeights);
     modelVersion += 1;
