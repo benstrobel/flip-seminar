@@ -75,8 +75,8 @@ export default function Home() {
       seasonStatData: [0, 0, 0, 0],
       usageStatData: [0, 0, 0, 0, 0, 0, 0],
     },
-    model: getModel(),
-    federatedModel: getModel(),
+    model: getModel(true),
+    federatedModel: getModel(false),
     federatedModelVersion: 0,
     serverLatestClientCount: 0,
     connected: false,
@@ -139,7 +139,8 @@ export default function Home() {
         const newLocalModel = await trainModel(appState.model, samples);
         const newFederatedModel = await trainModel(
           appState.federatedModel,
-          samples
+          samples,
+          5
         );
         setAppState((state) => ({ ...state, model: newLocalModel }));
         const newLocalStats = await modelBulkPredict(newLocalModel, stylesRaw as Style[]);
@@ -154,7 +155,7 @@ export default function Home() {
           federatedErrorVal: errorFederatedVal,
           localErrorTrain: errorLocalTrain, 
           federatedErrorTrain: errorFederatedTrain,
-          modelVersion: appState.federatedModelVersion
+          // modelVersion: appState.federatedModelVersion
         })
         await pushModel(newFederatedModel, appState.federatedModelVersion, samples.length);
       } else {
@@ -167,7 +168,13 @@ export default function Home() {
         }));
       }
     },
-    [appState.model, appState.samples, stylesRaw]
+    [appState.model, 
+      appState.samples, 
+      appState.federatedModel, 
+      appState.federatedModelVersion, 
+      appState.samplesSinceLastUpdate, 
+      appState.validationSamples
+    ]
   );
 
   return (

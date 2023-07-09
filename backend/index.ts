@@ -10,7 +10,7 @@ dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT;
-const clientThreshold = 1; // Set to 1 for demo purposes, increase for production
+const clientThreshold = 2; // Set to 1 for demo purposes, increase for production
 
 const wss = new WebSocket.Server({
   noServer: true,
@@ -25,7 +25,7 @@ app.use(
 
 app.use(cors());
 
-let model = getModel();
+let model = getModel(false);
 let modelVersion = 1;
 let clientModels: { [clientId: string]: {model: tf.Sequential, version: number, samplesUsed: number} } = {};
 
@@ -68,7 +68,7 @@ wss.on("connection", function (ws) {
   const clientId = Math.floor(Math.random() * 10000000000000);
   ws.onmessage = (event) => {
     console.log("received model from " + clientId);
-    const receivedModel = getModel();
+    const receivedModel = getModel(false);
     const decoded = applyDecodedWeights(event.data as string, receivedModel);
     const modelVersion: number = decoded.modelVersion;
     const samplesUsed: number = decoded.samplesUsed;
@@ -78,7 +78,7 @@ wss.on("connection", function (ws) {
 
 wss.on("close", () => {
   if(wss.clients.size === 0) {
-    model = getModel();
+    model = getModel(false);
     modelVersion = 1;
     clientModels = {};
   }

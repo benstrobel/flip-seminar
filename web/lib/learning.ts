@@ -41,20 +41,20 @@ export interface StatsData {
 
 export const sampleThreshold = 5;
 
-export function getModel() {
+export function getModel(local: boolean) {
   const model = tf.sequential();
   model.add(tf.layers.dense({ units: 20, inputShape: [34], activation: "selu" }));
   model.add(tf.layers.dense({ units: 10, inputShape: [20], activation: "selu" }));
   model.add(tf.layers.dense({ units: 1, inputShape: [10], activation: "selu" }));
   model.compile({
     loss: tf.metrics.binaryCrossentropy,
-    optimizer: new tf.AdamOptimizer(0.001, 0.9, 0.999, 0.00000001),
+    optimizer: local ? new tf.AdamOptimizer(0.001, 0.9, 0.999, 0.00000001) : new tf.SGDOptimizer(0.001),
     metrics: ["accuracy"]
   });
   return model;
 }
 
-export async function trainModel(model: tf.Sequential, samples: Sample[]) {
+export async function trainModel(model: tf.Sequential, samples: Sample[], epochs?: number) {
   const xs = tf.tensor2d(
     samples.map((x) => styleToModelInput(x.style)),
     [samples.length, 34]
@@ -63,7 +63,7 @@ export async function trainModel(model: tf.Sequential, samples: Sample[]) {
     samples.map((x) => [Number(x.pos === true)]),
     [samples.length, 1]
   );
-  return await model.fit(xs, ys, { batchSize: 5 }).then(() => {
+  return await model.fit(xs, ys, epochs ? { batchSize: 5, epochs: epochs } : { batchSize: 5 }).then(() => {
     return model;
   });
 }

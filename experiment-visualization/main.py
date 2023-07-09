@@ -1,7 +1,7 @@
 import json
 import matplotlib.pyplot as plt
 
-with open('experiments/1/log.json') as f:
+with open('experiments/2/YWB.json') as f:
     entries = json.load(f)
     plt.plot([x["localErrorVal"] for x in entries], label="Local Validation Loss")
     plt.plot([x["federatedErrorVal"] for x in entries], label="Federated Validation Loss")
