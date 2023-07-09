@@ -48,7 +48,7 @@ export function getModel() {
   model.add(tf.layers.dense({ units: 2, inputShape: [10] }));
   model.compile({
     loss: tf.losses.sigmoidCrossEntropy,
-    optimizer: new tf.SGDOptimizer(0.01),
+    optimizer: new tf.SGDOptimizer(0.01)
   });
   return model;
 }
@@ -86,6 +86,26 @@ export async function modelBulkPredict(
     )
   ) as tf.Tensor<tf.Rank>;
   return bulkPredictionToStatsData(bulkInput, predictions);
+}
+
+export async function modelMetrics(
+  model: tf.Sequential,
+  samples: Sample[]
+) {
+  const groundTruth = tf.tensor2d(
+    samples.map((x) => [Number(x.pos === true), Number(x.pos === false)]),
+    [samples.length, 2]
+  )
+
+  const predictions = model.predict(
+    tf.tensor2d(
+      samples.map((x) => styleToModelInput(x.style)),
+      [samples.length, 34]
+    )
+  ) as tf.Tensor<tf.Rank>;
+
+  const errors = tf.metrics.meanSquaredError(groundTruth, predictions);
+  return errors.mean().dataSync()[0];
 }
 
 async function bulkPredictionToStatsData(

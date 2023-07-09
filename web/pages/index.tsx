@@ -12,6 +12,7 @@ import {
   applyDecodedWeights,
   getModel,
   modelBulkPredict,
+  modelMetrics,
   sampleThreshold,
   trainModel,
 } from "@/lib/learning";
@@ -37,6 +38,7 @@ const maxDictIndex = stylesRaw.length;
 export interface ApplicationState {
   currentIndex: number;
   samples: Sample[];
+  samplesSinceLastUpdate: number;
   nextImageLoading: boolean;
   localStatsData: StatsData;
   remoteStatsData: StatsData;
@@ -57,6 +59,7 @@ export default function Home() {
   const [appState, setAppState] = useState<ApplicationState>({
     currentIndex: getNewIndex(),
     samples: [],
+    samplesSinceLastUpdate: 0,
     nextImageLoading: false,
     localStatsData: {
       colorStatData: [0, 0, 0, 0, 0],
@@ -110,13 +113,14 @@ export default function Home() {
   const sampleCallback = useCallback(
     async (style: Style, pos: boolean) => {
       setTransitionState({mounted: false, transition: pos ? "slide-left" : "slide-right"})
-      if (appState.samples.length >= sampleThreshold) {
+      if (appState.samplesSinceLastUpdate >= sampleThreshold) {
         const samples = appState.samples; // TODO Split into training and validation set
         setAppState((state) => ({
           ...state,
           currentIndex: getNewIndex(),
           nextImageLoading: true,
-          samples: [{ style: style, pos: pos }],
+          samples: [...state.samples, { style: style, pos: pos }],
+          samplesSinceLastUpdate: 0
         }));
         const newLocalModel = await trainModel(appState.model, samples);
         const newFederatedModel = await trainModel(
@@ -126,6 +130,8 @@ export default function Home() {
         setAppState((state) => ({ ...state, model: newLocalModel }));
         const newLocalStats = await modelBulkPredict(newLocalModel, stylesRaw as Style[]);
         setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
+        const error = await modelMetrics(newLocalModel, samples);
+        console.log("Error: " + error)
         console.log("Updated local model");
         await pushModel(newFederatedModel);
       } else {
@@ -134,6 +140,7 @@ export default function Home() {
           currentIndex: getNewIndex(),
           nextImageLoading: true,
           samples: [...state.samples, { style: style, pos: pos }],
+          samplesSinceLastUpdate: state.samplesSinceLastUpdate +1 
         }));
       }
     },
