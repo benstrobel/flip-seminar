@@ -76,6 +76,14 @@ wss.on("connection", function (ws) {
   };
 });
 
+wss.on("close", () => {
+  if(wss.clients.size === 0) {
+    model = getModel();
+    modelVersion = 1;
+    clientModels = {};
+  }
+})
+
 const server = app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
 });

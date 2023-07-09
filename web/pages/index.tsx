@@ -38,6 +38,7 @@ const maxDictIndex = stylesRaw.length;
 export interface ApplicationState {
   currentIndex: number;
   samples: Sample[];
+  validationSamples: Sample[];
   samplesSinceLastUpdate: number;
   nextImageLoading: boolean;
   localStatsData: StatsData;
@@ -57,10 +58,13 @@ function getNewIndex(): number {
   }
 }
 
+let timeoutHandle: NodeJS.Timeout | null = null;
+
 export default function Home() {
   const [appState, setAppState] = useState<ApplicationState>({
     currentIndex: getNewIndex(),
     samples: [],
+    validationSamples: [],
     samplesSinceLastUpdate: 0,
     nextImageLoading: false,
     localStatsData: {
@@ -117,19 +121,33 @@ export default function Home() {
 
   const [transitionState, setTransitionState] = useState<TransitionState>({transition: "fade", mounted: true});
 
+  function skipCurrentSample() {
+    console.log("skipping current sample")
+    setAppState((state) => ({
+        ...state,
+        currentIndex: getNewIndex(),
+        nextImageLoading: true,
+    }))
+  }
+
   const sampleCallback = useCallback(
     async (style: Style, pos: boolean) => {
       setTransitionState({mounted: false, transition: pos ? "slide-left" : "slide-right"})
       setTimeout(() => {
         setTransitionState({transition: "fade", mounted: true});
       }, 750);
+      if(timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
       if (appState.samplesSinceLastUpdate >= sampleThreshold) {
         const samples = appState.samples; // TODO Split into training and validation set
+        const validationSamples = [...appState.validationSamples, { style: style, pos: pos }]
         setAppState((state) => ({
           ...state,
           currentIndex: getNewIndex(),
           nextImageLoading: true,
-          samples: [...state.samples, { style: style, pos: pos }],
+          samples: [...state.samples],
+          validationSamples: validationSamples,
           samplesSinceLastUpdate: 0
         }));
         const newLocalModel = await trainModel(appState.model, samples);
@@ -140,8 +158,18 @@ export default function Home() {
         setAppState((state) => ({ ...state, model: newLocalModel }));
         const newLocalStats = await modelBulkPredict(newLocalModel, stylesRaw as Style[]);
         setAppState((state) => ({ ...state, localStatsData: newLocalStats }));
-        const error = await modelMetrics(newLocalModel, samples);
-        console.log("Error: " + error + " Samples: " + samples.length)
+        const errorLocalTrain = await modelMetrics(newLocalModel, samples);
+        const errorFederatedTrain = await modelMetrics(appState.federatedModel, samples);
+        const errorLocalVal = await modelMetrics(newLocalModel, validationSamples);
+        const errorFederatedVal = await modelMetrics(appState.federatedModel, validationSamples);
+        console.log({
+          localErrorVal: errorLocalVal, 
+          samplesLocal: samples.length, 
+          federatedErrorVal: errorFederatedVal,
+          localErrorTrain: errorLocalTrain, 
+          federatedErrorTrain: errorFederatedTrain,
+          modelVersion: appState.federatedModelVersion
+        })
         await pushModel(newFederatedModel, appState.federatedModelVersion, samples.length);
       } else {
         setAppState((state) => ({
@@ -152,6 +180,9 @@ export default function Home() {
           samplesSinceLastUpdate: state.samplesSinceLastUpdate +1 
         }));
       }
+      timeoutHandle = setTimeout(() => {
+        skipCurrentSample();
+      }, 7500)
     },
     [appState.model, appState.samples, stylesRaw]
   );
