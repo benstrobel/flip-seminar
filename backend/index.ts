@@ -44,11 +44,11 @@ async function receiveModel(receivedModel: tf.Sequential, clientId: number, clie
     const newWeights: tf.Tensor<tf.Rank>[] = [];
     const sampleSum = Object.values(clientModels).reduce((prev, curr) => prev + curr.samplesUsed, 0)
     for (let i = 0; i < currentWeights.length; i++) {
-      const clientWeightWithIndex = Object.values(clientModels).map((x) => tf.mul(x.model.getWeights()[i], x.samplesUsed * stalenessFactor(modelVersion, clientModelVersion)));
+      const clientWeightWithIndex = Object.values(clientModels).map((x) => tf.mul(x.model.getWeights()[i], 1 * stalenessFactor(modelVersion, x.version)));
       newWeights[i] = tf.div(tf.div(tf.addN([
-        ...Array(clientWeightWithIndex.length).fill(tf.mul(currentWeights[i], sampleSum)),
+        ...Array(clientWeightWithIndex.length).fill(tf.mul(currentWeights[i], 1)),
         ...clientWeightWithIndex,
-      ]), clientWeightWithIndex.length + 1), sampleSum*2);
+      ]), clientWeightWithIndex.length + 1), 1);
     }
     model.setWeights(newWeights);
     modelVersion += 1;
