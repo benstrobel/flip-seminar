@@ -26,12 +26,11 @@ app.use(
 app.use(cors());
 
 let model = getModel();
-let modelSamplesIncluded = 5;
 let modelVersion = 1;
 let clientModels: { [clientId: string]: {model: tf.Sequential, version: number, samplesUsed: number} } = {};
 
 function stalenessFactor(serverModelVersion: number, clientModelVersion: number) {
-  return clientModelVersion === 0 ? 1 : 1/(serverModelVersion-clientModelVersion);
+  return (serverModelVersion-clientModelVersion) === 0 ? 1 : 1/(serverModelVersion-clientModelVersion);
 }
 
 async function receiveModel(receivedModel: tf.Sequential, clientId: number, clientModelVersion: number, samplesUsed: number) {
@@ -43,13 +42,13 @@ async function receiveModel(receivedModel: tf.Sequential, clientId: number, clie
   if (Object.keys(clientModels).length >= clientThreshold) {
     const currentWeights = model.getWeights();
     const newWeights: tf.Tensor<tf.Rank>[] = [];
-    const sampleSum = modelSamplesIncluded + Object.values(clientModels).reduce((prev, curr) => prev + curr.samplesUsed, 0)
+    const sampleSum = Object.values(clientModels).reduce((prev, curr) => prev + curr.samplesUsed, 0)
     for (let i = 0; i < currentWeights.length; i++) {
       const clientWeightWithIndex = Object.values(clientModels).map((x) => tf.mul(x.model.getWeights()[i], x.samplesUsed * stalenessFactor(modelVersion, clientModelVersion)));
       newWeights[i] = tf.div(tf.div(tf.addN([
-        ...Array(clientWeightWithIndex.length).fill(tf.mul(currentWeights[i], modelSamplesIncluded)),
+        ...Array(clientWeightWithIndex.length).fill(tf.mul(currentWeights[i], sampleSum)),
         ...clientWeightWithIndex,
-      ]), clientWeightWithIndex.length + 1), sampleSum);
+      ]), clientWeightWithIndex.length + 1), sampleSum*2);
     }
     model.setWeights(newWeights);
     modelVersion += 1;
