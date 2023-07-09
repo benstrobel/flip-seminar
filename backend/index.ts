@@ -26,12 +26,11 @@ app.use(
 
 app.use(cors());
 
-let model = getModel();
+let model = getModel(false);
 let modelVersion = 1;
 let clientModels: { [clientId: string]: {model: tf.Sequential, version: number, samplesUsed: number} } = {};
 
 async function receiveModel(receivedModel: tf.Sequential, clientId: number, clientModelVersion: number, samplesUsed: number) {
-  // TODO Find & Fix bug causing model not to change afte a couple of rounds
   console.log(
     "received client model " + (Object.keys(clientModels).length + 1 + " from version: " + clientModelVersion + " with sample count: " + samplesUsed)
   );
@@ -68,7 +67,7 @@ wss.on("connection", function (ws) {
   const clientId = Math.floor(Math.random() * 10000000000000);
   ws.onmessage = (event) => {
     console.log("received model from " + clientId);
-    const receivedModel = getModel();
+    const receivedModel = getModel(false);
     const decoded = applyDecodedWeights(event.data as string, receivedModel);
     const modelVersion: number = decoded.modelVersion;
     const samplesUsed: number = decoded.samplesUsed;
@@ -78,7 +77,7 @@ wss.on("connection", function (ws) {
 
 wss.on("close", () => {
   if(wss.clients.size === 0) {
-    model = getModel();
+    model = getModel(false);
     modelVersion = 1;
     clientModels = {};
   }

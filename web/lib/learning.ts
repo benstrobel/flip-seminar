@@ -41,14 +41,14 @@ export interface StatsData {
 
 export const sampleThreshold = 5;
 
-export function getModel() {
+export function getModel(local: boolean) {
   const model = tf.sequential();
   model.add(tf.layers.dense({ units: 20, inputShape: [34], activation: "selu" }));
   model.add(tf.layers.dense({ units: 10, inputShape: [20], activation: "selu" }));
   model.add(tf.layers.dense({ units: 1, inputShape: [10], activation: "selu" }));
   model.compile({
     loss: tf.metrics.binaryCrossentropy,
-    optimizer: new tf.AdamOptimizer(0.001, 0.9, 0.999, 0.00000001),
+    optimizer: local ? new tf.AdamOptimizer(0.001, 0.9, 0.999, 0.00000001) : new tf.SGDOptimizer(0.001),
     metrics: ["accuracy"]
   });
   return model;
