@@ -14,7 +14,6 @@ export function connect(connectedCallback: () => void) {
 }
 
 export async function pushModel(model: tf.Sequential, modelVersion: number, samplesUsed: number) {
-  // TODO Implement differential privacy perturbation
   if (ws && ws.OPEN) {
     ws.send(await encodeWeights(model, modelVersion, samplesUsed));
   }

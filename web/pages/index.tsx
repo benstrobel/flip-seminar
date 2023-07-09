@@ -126,7 +126,7 @@ export default function Home() {
         setTransitionState({transition: "fade", mounted: true});
       }, 750);
       if (appState.samplesSinceLastUpdate >= sampleThreshold) {
-        const samples = appState.samples; // TODO Split into training and validation set
+        const samples = appState.samples;
         const validationSamples = [...appState.validationSamples, { style: style, pos: pos }]
         setAppState((state) => ({
           ...state,
