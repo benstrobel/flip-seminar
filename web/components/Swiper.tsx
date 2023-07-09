@@ -64,7 +64,7 @@ export default function Swiper({
                   onClick={() => {
                     sampleCallback(style, false);
                   }}
-                  disabled={loading}
+                  disabled={loading && !transitionState.mounted}
                 >
                   <X color="red" />
                 </ActionIcon>
@@ -75,7 +75,7 @@ export default function Swiper({
                   onClick={() => {
                     sampleCallback(style, true);
                   }}
-                  disabled={loading}
+                  disabled={loading && !transitionState.mounted}
                 >
                   <Heart color="green" />
                 </ActionIcon>
