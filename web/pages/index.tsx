@@ -58,8 +58,6 @@ function getNewIndex(): number {
   }
 }
 
-let timeoutHandle: NodeJS.Timeout | null = null;
-
 export default function Home() {
   const [appState, setAppState] = useState<ApplicationState>({
     currentIndex: getNewIndex(),
@@ -121,24 +119,12 @@ export default function Home() {
 
   const [transitionState, setTransitionState] = useState<TransitionState>({transition: "fade", mounted: true});
 
-  function skipCurrentSample() {
-    console.log("skipping current sample")
-    setAppState((state) => ({
-        ...state,
-        currentIndex: getNewIndex(),
-        nextImageLoading: true,
-    }))
-  }
-
   const sampleCallback = useCallback(
     async (style: Style, pos: boolean) => {
       setTransitionState({mounted: false, transition: pos ? "slide-left" : "slide-right"})
       setTimeout(() => {
         setTransitionState({transition: "fade", mounted: true});
       }, 750);
-      if(timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
       if (appState.samplesSinceLastUpdate >= sampleThreshold) {
         const samples = appState.samples; // TODO Split into training and validation set
         const validationSamples = [...appState.validationSamples, { style: style, pos: pos }]
@@ -180,9 +166,6 @@ export default function Home() {
           samplesSinceLastUpdate: state.samplesSinceLastUpdate +1 
         }));
       }
-      timeoutHandle = setTimeout(() => {
-        skipCurrentSample();
-      }, 7500)
     },
     [appState.model, appState.samples, stylesRaw]
   );
